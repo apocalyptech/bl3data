@@ -73,3 +73,8 @@ Note too that the matching logic doesn't do well with files *just* in the
 root directory; if you've got maps and stuff sitting in there, move 'em
 into a temp directory (or fix the script, of course, but eh)
 
+As of Broken Hearts, I'd also manually moved the `Localization` dir up
+into `Game` (that's honestly probably not right, but whatever, it's not
+game objects).  Also moved `InventorySerialNumberDatabase.dat` into
+`Game`.
+
