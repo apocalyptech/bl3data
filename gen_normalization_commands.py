@@ -21,6 +21,12 @@ import struct
 # `Game` before running this.  (Or any other dir, really, but I tend to use
 # `Game` out of habit.)
 
+# TODO: In my extracted dir, I've got the following couple of objects:
+#    /Game/Gear/Artifacts/_Design/PartSets/SecondaryStats/Elemental/Artifact_Part_Stats_CryoDamage_2
+#    /Game/Gear/Artifacts/_Design/PartSets/SecondaryStats/Elemental/Artifact_Part_Stats_FireDamage_2
+# ... those "_2" suffixes shouldn't be there; not sure how that got there.
+# Should look into that.
+
 num_re = re.compile('^(.*)_(\d+)$')
 
 def read_int(df):
