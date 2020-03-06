@@ -12,18 +12,14 @@ import struct
 # generate a set of commands which can be used (on Linux, at least) to make the
 # on-filesystem paths match the object paths exactly.
 #
-# This hasn't been run on the "full" set of BL3 assets in quite awhile, and may do
-# some things slightly wrong.  There was a bit of weirdness, for instance, with
-# the AMD Red Chipper ECHO skin object, which we were briefly (and incorrectly)
-# hardcoding to a specific path, though that's been commented since then.
+# The code's not especially clean, sorry about that.  Note one more time that
+# this just generates commands which you can then run to move the files around;
+# it doesn't make any changes itself.
 #
-# It's been run a few times on "new" patch pak data, though, to put all those in
-# place before copying the new data over the previously-extracted dirs, and seems
-# to work fine in that context.
-#
-# Anyway, the code's not especially clean, sorry about that.  Note one more time
-# that this just generates commands which you can then run to move the files
-# around; it doesn't make any changes itself.
+# Note that this does *not* work well on files that are just in the "root" dir
+# of the export.  If you've got anything hanging around there, move it up into
+# `Game` before running this.  (Or any other dir, really, but I tend to use
+# `Game` out of habit.)
 
 num_re = re.compile('^(.*)_(\d+)$')
 
@@ -67,15 +63,14 @@ def get_sym_hits(syms, match_str):
 
 # Some hardcoded results for edge cases not otherwise worth dealing with
 hardcodes = {
-        # Oh, huh, this is wrong.  Don't recall what happens without this in here, but
-        # that uasset should go into /Game/PlayerCharacters/_Customizations/EchoDevice
-        # instead.  Though there *is* an ECHOTheme_35.uasset inside /Game/UI/_Shared
-        # too, so eh?
-        #'./Game/ECHOTheme_35.uasset': '/Game/UI/_Shared/CustomIconsEcho/ECHOTheme_35',
+        # There are two ECHOTheme_35.uasset files; the one which lives canonically
+        # in /Game/UI/_Shared/CustomIconsEcho is already sorted properly, but the
+        # one that lives in /Game/PlayerCharacters/_Customizations/EchoDevice is
+        # stuck out in the root dir (which I move into /Game as part of this process).
+        # Have to hardcode it because otherwise it doesn't know where to go.  This
+        # comes from pak-2019-10-03-patch, btw.
+        './Game/ECHOTheme_35.uasset': '/Game/PlayerCharacters/_Customizations/EchoDevice/ECHOTheme_35',
         }
-
-# TODO: .umap files seem to have locations in there too, and don't have a .uexp of their own.
-# So our homedir remains a bit littered with map files which probably shouldn't be there.
 
 cmd_mkdirs = set()
 cmd_moves = []
@@ -175,4 +170,7 @@ for mkdir in sorted(cmd_mkdirs):
     print('mkdir -p .{}'.format(mkdir))
 for (mv_from, mv_to) in cmd_moves:
     print('mv -i {}.* .{}'.format(mv_from, mv_to))
+# This command will end up generating some errors on the console; I probably need to
+# prune stuff or whatever.
 print('find . -type d -print0 | xargs -0 rmdir -p --ignore-fail-on-non-empty')
+

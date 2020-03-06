@@ -43,21 +43,52 @@ New-Data Steps
 
 These are my notes of what I do when a new patch is released, after
 extracting all the new `.pak` files into a separate `pak-YYYY-MM-DD-note`
-directory and extracting using `uncompress.sh`.
+directory and extracting using `uncompress.sh`.  This can also be used
+to "step through" uncompressing BL3 data freshly, if you wanted to make
+sure to unpack the pakfiles in the right order.  Just uncompress each
+patch at a time, do these steps, and merge 'em in.
 
-Move data from `OakGame/Content` into the "base" extracted dir.
-Oct 24 2019 patch also had just a bare `Content` dir instead, which seemed
-like it needed merging.
+First off, a few things which don't *really* matter at all (at least for
+the data I care about), but I tend to handle regardless.  The data objects
+themselves will get moved around properly by a script a little further
+down, regardless, so you can probably just ignore these bits if you want:
 
-Files to remove from extracted paks:
+- Depending on the pakfiles that have been unpacked, there may be an
+  `OakGame/Content` dir or a `Content` dir; I generally try to keep those
+  at the same "level," so I may manually move them around after unpacking.
+  It doesn't really matter much 'cause any game objects will get moved
+  into their proper paths below.  I've not always been super consistent
+  about that on my own unpacks.
+- The file `InventorySerialNumberDatabase.dat` possibly moves around a bit
+  depending on the Paks, too -- I tend to keep that in `/Game` itself, though
+  it doesn't really matter much (though if you're not consistent then you
+  may end up with multiple of the same file.  (Again, doesn't really matter
+  much; this file is useful when processing savegame item serial numbers
+  is all.)
+- There's a `Localization` dir which might move around a bit, as well.  I
+  tend to just sort of ignore that one, though theoretically it should
+  get moved around so you're not left with multiple copies.
+
+Now, move any "bare" files in the `extractednew` dir up into the `Game` dir
+(create if needed).  The script we use to get objects into their proper
+paths doesn't like files just on the base dir.
+
+Files to remove from extracted paks (just to save on space; stuff I don't
+personally care about.  This'll include audio/video and stuff, so if you
+want that data, maybe you don't want to delete all of it):
 
 - `*.wem`
 - `*.bnk`
 - `ShaderArchive-*`
 - `PipelineCaches`
+- `TritonData`
 
 Then give `gen_normalize_commands.py` a run, check the output, and run the
-commands, so that the object names match the filesystem paths.
+commands, so that the object names match the filesystem paths.  As mentioned
+above, the matching logic sort of doesn't know what to do with files that
+are  *just* in the root directory; if you've got maps and stuff sitting in
+there, move 'em into a temp directory (I use `Game`).  That or I could fix
+the script, but that probably won't happen.
 
 To get a list of files which the patch is going to overwrite, you can do
 shenanigans like:
@@ -65,16 +96,8 @@ shenanigans like:
     (find . -type f -exec ls ../extracted/{} \;) 2>/dev/null
     (find . -type f -exec ls ../extracted-patch-2019-10-03/{} \;) 2>/dev/null
 
-In Dandelion DLC (moxxi), there was an `OakGame` dir at the root there,
-which we've previously had inside `Game`.  Sort of doesn't matter since
-there's no uasset/umap files in there, but worth mentioning
+Then compare the lists.
 
-Note too that the matching logic doesn't do well with files *just* in the
-root directory; if you've got maps and stuff sitting in there, move 'em
-into a temp directory (or fix the script, of course, but eh)
-
-As of Broken Hearts, I'd also manually moved the `Localization` dir up
-into `Game` (that's honestly probably not right, but whatever, it's not
-game objects).  Also moved `InventorySerialNumberDatabase.dat` into
-`Game`.
+Anyway, once you're feeling good about the re-sorted objects, just copy the
+new data on top of the existing data.
 
