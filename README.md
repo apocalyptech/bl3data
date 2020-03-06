@@ -101,3 +101,14 @@ Then compare the lists.
 Anyway, once you're feeling good about the re-sorted objects, just copy the
 new data on top of the existing data.
 
+After all this, I'm aware of two objects which *are* wrong, and I'd forgotten
+to investigigate it while testing the whole process again, so for now just fix
+them by hand, if you think you might want to serialize these objects using my
+data library routines.  Specifically, a couple of artifact parts end up with a
+`_2` suffix in their filename.  No idea if that's due to the original filenames
+from the PAK file or not...
+
+- `/Game/Gear/Artifacts/_Design/PartSets/SecondaryStats/Elemental/Artifact_Part_Stats_CryoDamage_2`
+- `/Game/Gear/Artifacts/_Design/PartSets/SecondaryStats/Elemental/Artifact_Part_Stats_FireDamage_2`
+
+In both cases, just remove the `_2` entirely from both `.uasset` and `.uexp`.
