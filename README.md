@@ -112,3 +112,11 @@ from the PAK file or not...
 - `/Game/Gear/Artifacts/_Design/PartSets/SecondaryStats/Elemental/Artifact_Part_Stats_FireDamage_2`
 
 In both cases, just remove the `_2` entirely from both `.uasset` and `.uexp`.
+
+License
+-------
+
+All code in this project is is licensed under the
+[New/Modified (3-Clause) BSD License](https://opensource.org/licenses/BSD-3-Clause).
+A copy can be found in [COPYING.txt](COPYING.txt).
+
