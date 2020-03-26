@@ -224,3 +224,7 @@ fcf4d9c9b3135c6a9e8aa9865d83ffe0c023daebea2f1c86b8323608a6a0c9de  pakchunk88-Win
 933e1f09a7ab13104e67b025ff9153f4c6bb8d4e6f233e032ace4cca4afa95cf  pakchunk90-WindowsNoEditor_4_P.pak
 2ba30e0e5b2ed0e40f5f80792135978b78531633aeb27dd32d65aaaaf6ef6ebd  pakchunk91-WindowsNoEditor_4_P.pak
 
+pak-2020-03-26-02-dlc2
+
+f83177d30fa0d5e7f25e464e87347120b6449dffc3b1a00ce8cbee21e0454811  Hibiscus.pak
+

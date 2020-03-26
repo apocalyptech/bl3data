@@ -30,8 +30,9 @@ import re
 import sys
 
 pak_re = re.compile(r'^pakchunk(\d+)(optional)?-WindowsNoEditor(_(\d+)_P)?\.pak$')
-# Making some assumptions about how DLC1 patch paks might look
+# Making some assumptions about how DLC patch paks might look
 dlc1_re = re.compile(r'^Dandelion(_(\d+)_P)?\.pak$')
+dlc2_re = re.compile(r'^Hibiscus(_(\d+)_P)?\.pak$')
 
 dlc_step = 1000
 
@@ -57,7 +58,15 @@ class PakFile(object):
                 else:
                     self.patchnum = -1
             else:
-                raise Exception('Unknown pak file: {}'.format(filename))
+                match = dlc2_re.match(self.filename)
+                if match:
+                    self.paknum = 2*dlc_step
+                    if match.group(1):
+                        self.patchnum = int(match.group(2))
+                    else:
+                        self.patchnum = -1
+                else:
+                    raise Exception('Unknown pak file: {}'.format(filename))
         #print('{}: {}, {}'.format(self.filename, self.paknum, self.patchnum))
 
     def __lt__(self, other):
