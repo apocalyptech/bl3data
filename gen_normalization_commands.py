@@ -198,9 +198,9 @@ for (dirpath, dirnames, filenames) in os.walk('.'):
                     cmd_moves.append((full_filename[:-5], dest_dir))
 
 for mkdir in sorted(cmd_mkdirs):
-    print('mkdir -p .{}'.format(mkdir))
+    print('mkdir -p ".{}"'.format(mkdir))
 for (mv_from, mv_to) in cmd_moves:
-    print('mv -i {}.* .{}'.format(mv_from, mv_to))
+    print('mv -i "{}".* ".{}"'.format(mv_from, mv_to))
 # This command will end up generating some errors on the console; I probably need to
 # prune stuff or whatever.
 print('find . -type d -print0 | xargs -0 rmdir -p --ignore-fail-on-non-empty')
