@@ -62,6 +62,8 @@ not especially useful to most Windows users, alas.
 New-Data Steps
 --------------
 
+### Sorting and Extraction
+
 These are my notes of what I do when a new patch is released.  First,
 to prep/extract the data:
 
@@ -82,12 +84,31 @@ somewhat untested; since I do my per-patch directory structure personally,
 I don't extract patches which overwrite data -- I think that `UnrealPak`
 might actually refuse to overwrite by default, so be careful with that.)
 
-Now on to massaging the data into place:
+### Massaging the Data
 
-First off, a few things which don't *really* matter at all (at least for
-the data I care about), but I tend to handle regardless.  The data objects
-themselves will get moved around properly by a script a little further
-down, regardless, so you can probably just ignore these bits if you want:
+The first thing I tend to do at this point is get rid of files that I
+don't personally care about, to save on spaces.  This'll include audio/
+video and stuff, so if you want that data, maybe don't delete 'em.
+Here's the stuff that I tend to delete outright, though (the bottom
+three are found in various subdirs; I just use `find` to remove 'em):
+
+- `*.wem`
+- `*.bnk`
+- `ShaderArchive-*`
+- `PipelineCaches`
+- `TritonData`
+
+Then, I move any "bare" files in the `extractednew` dir up into the `Game` dir
+(create if needed).  The script we use to get objects into their proper
+paths doesn't like files just on the base dir, and rather than fix the
+util I tend to just move 'em up so they get processed properly.
+
+Then there's a bunch of stuff that doesn't really matter at all, at least
+for the data I care about, but I sometimes look into regardless.  The actual
+data objects wil end up getting shuffled around to their "proper" places
+in a later step anyway, so this basically just deals with files that *aren't*
+`.uasset`/`.uexp`/`.umap`/`.ublk` files.  Regardless, you can probably mostly
+ignore these bits if you want:
 
 - Depending on the pakfiles that have been unpacked, there may be an
   `OakGame/Content` dir or a `Content` dir; I generally try to keep those
@@ -98,29 +119,19 @@ down, regardless, so you can probably just ignore these bits if you want:
 - The file `InventorySerialNumberDatabase.dat` possibly moves around a bit
   depending on the Paks, too -- I tend to keep that in `/Game` itself, though
   it doesn't really matter much (though if you're not consistent then you
-  may end up with multiple of the same file.  (Again, doesn't really matter
+  may end up with multiple of the same file).  Again, doesn't really matter
   much; this file is useful when processing savegame item serial numbers
-  is all.)
+  is all.
 - There's a `Localization` dir which might move around a bit, as well.  I
   tend to just sort of ignore that one, though theoretically it should
   get moved around so you're not left with multiple copies.
 
-Now, move any "bare" files in the `extractednew` dir up into the `Game` dir
-(create if needed).  The script we use to get objects into their proper
-paths doesn't like files just on the base dir.
+### Put Objects In the Proper Paths
 
-Files to remove from extracted paks (just to save on space; stuff I don't
-personally care about.  This'll include audio/video and stuff, so if you
-want that data, maybe you don't want to delete all of it):
-
-- `*.wem`
-- `*.bnk`
-- `ShaderArchive-*`
-- `PipelineCaches`
-- `TritonData`
-
-Then give `gen_normalize_commands.py` a run, check the output, and run the
-commands, so that the object names match the filesystem paths.  As mentioned
+Next, give `gen_normalize_commands.py` a run you'll need to redirect output
+to a file, check that file for the list of commands, and then run those
+commands if they look good.  This'll move all the object files around so
+that the filesystem paths match the in-game object paths.  As mentioned
 above, the matching logic sort of doesn't know what to do with files that
 are  *just* in the root directory; if you've got maps and stuff sitting in
 there, move 'em into a temp directory (I use `Game`).  That or I could fix
@@ -130,7 +141,7 @@ To get a list of files which the patch is going to overwrite, you can do
 shenanigans like:
 
     (find . -type f -exec ls ../extracted/{} \;) 2>/dev/null
-    (find . -type f -exec ls ../extracted-patch-2019-10-03/{} \;) 2>/dev/null
+    (find . -type f -exec ls ../extractednew/{} \;) 2>/dev/null
 
 Then compare the lists.
 
