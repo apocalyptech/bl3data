@@ -75,9 +75,10 @@ class PakFile(object):
     def __repr__(self):
         return self.filename
 
-files = []
-for line in sys.stdin.readlines():
-    files.append(PakFile(line.strip()))
+if __name__ == '__main__':
+    files = []
+    for line in sys.stdin.readlines():
+        files.append(PakFile(line.strip()))
 
-for filename in sorted(files):
-    print(filename)
+    for filename in sorted(files):
+        print(filename)

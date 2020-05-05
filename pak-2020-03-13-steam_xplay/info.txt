@@ -1,0 +1,10 @@
+NOTE: The following five pakfiles were overwritten by the next patch (for
+DLC2), so these checksums aren't ever actually going to match what's
+on-disk now.
+
+    pakchunk0-WindowsNoEditor_5_P.pak
+    pakchunk1-WindowsNoEditor_5_P.pak
+    pakchunk4-WindowsNoEditor_5_P.pak
+    pakchunk5-WindowsNoEditor_5_P.pak
+    pakchunk6-WindowsNoEditor_5_P.pak
+

@@ -6,11 +6,39 @@ that's most useful for data inspection.  I Run BL3 on Linux using
 Wine/Proton, so all of these assume Linux as well, so they're probably
 not especially useful to most Windows users, alas.
 
+- `link_paks.py`: I like to keep BL3's pakfiles sorted into dirs which
+  correspond to the patches in which they were released.  This was easy
+  enough to hand-manage when I was just adding them one at a time, as
+  patches were released, but when I got the Steam version (in addition
+  to EGS) and noticed that some of the checksums of pakfiles didn't
+  match, it came time to automate.  Pass it a list of directories in 
+  the current dir which start with `pak-`.  Each `pak-*` dir should have a
+  `filelist.txt` in it, which is just a list of the pakfiles released
+  in that patch.  This util will update symlinks based on a `-s`/`--store`
+  argument, and now defaults to Steam.  Optionally, it'll also update
+  our checksum files if it's passed `-c`/`--checksum`.  (It'll just
+  append to the file.)
+
+  - `checksums-sha256sum-egs.txt`: A list of sha256sum checksums for all
+    the pakfiles in BL3, from Epic Games Store.  As of the Steam release,
+    these often differ between platforms.
+
+  - `checksums-sha256sum-steam.txt`: A list of sha256sum checksums for all
+    the pakfiles in BL3, from Steam.  As of the Steam release, these
+    often differ between platforms.
+
+  - Note for both of these that in the patch *after* the Steam release
+    (ie: the patch that came with DLC2), five new paks from the previous
+    patch got overwritten entirely, so the checksums of five of the paks
+    in `pak-2020-03-13-steam_xplay` have been removed, since they'll no
+    longer match the live files.
+
 - `uncompress.sh`: Used to call `UnrealPak.exe` via Wine to uncompress
   a bunch of PAK files.  Requires a `crypto.json` file to be populated
   using the BL3 encryption key.  (The key won't be stored on here; you'll
   have to find it elsewhere online.)  Should put all the new data in
-  an `extractednew` directory.
+  an `extractednew` directory.  You'd pass in one of the `pak-*` dirs
+  from above into this.
 
 - `gen_normalization_commands.py`: After extracting the data, the object
   names will often not exactly match the paths where they live on the
@@ -20,13 +48,6 @@ not especially useful to most Windows users, alas.
   bit since the initial runthrough, and hasn't been run against a
   completely-fresh unpack of all BL3 data, so be on the lookout for
   any problems!
-
-- `gen_checksums.py`: Just used to append to `checksums-sha256sum.txt`
-  when patches have been released.
-
-  - `checksums-sha256sum.txt`: Just a list of sha256sum checksums for all
-    the pakfiles in BL3.  They're organized by patch date, so you can
-    easily see which pak files were added at what point in BL3's history.
 
 - `find_dup_packs.py`: Little utility to see if duplicate PAK files
   exist in any dirs.  Just some sanity checks for myself.
@@ -41,12 +62,27 @@ not especially useful to most Windows users, alas.
 New-Data Steps
 --------------
 
-These are my notes of what I do when a new patch is released, after
-extracting all the new `.pak` files into a separate `pak-YYYY-MM-DD-note`
-directory and extracting using `uncompress.sh`.  This can also be used
-to "step through" uncompressing BL3 data freshly, if you wanted to make
-sure to unpack the pakfiles in the right order.  Just uncompress each
-patch at a time, do these steps, and merge 'em in.
+These are my notes of what I do when a new patch is released.  First,
+to prep/extract the data:
+
+1. Create a new `pak-YYYY-MM-DD-note` dir, with a `filelist.txt` inside
+   which lists the new/update pakfiles
+2. Use `link_paks.py` to symlink the pakfiles into the dir, for the given
+   store, and generate updated checksums.  Repeat this for both stores,
+   if you want both sets of checksums.
+3. Uncompress the new `pak-*` dir using `uncompress.sh`.  This will leave
+   an `extractednew` dir alongside the main `extracted` dir, with the
+   new data.
+
+If you don't care about my `pak-*` directory organization, you can just
+lump all the paks in a single dir and `uncompress.sh` that.  It should
+automatically call out to `paksort.py` to make sure things uncompress in
+the right order to overwrite objects where appropriate.  (Note that that's
+somewhat untested; since I do my per-patch directory structure personally,
+I don't extract patches which overwrite data -- I think that `UnrealPak`
+might actually refuse to overwrite by default, so be careful with that.)
+
+Now on to massaging the data into place:
 
 First off, a few things which don't *really* matter at all (at least for
 the data I care about), but I tend to handle regardless.  The data objects

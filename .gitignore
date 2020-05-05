@@ -1,4 +1,5 @@
 crypto.json
 extracted
-pak-*
+pak-*/*.pak
 UnrealPak*
+__pycache__

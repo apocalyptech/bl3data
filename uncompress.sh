@@ -13,7 +13,7 @@ fi
 
 echo "Processing $1..."
 cd $1
-for file in *.pak
+for file in $(/bin/ls *.pak | ../paksort.py)
 do
     wine64 ../UnrealPak.exe $file -extract extractednew -cryptokeys=crypto.json
 done

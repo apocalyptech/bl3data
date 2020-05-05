@@ -193,12 +193,15 @@ ece72c1d9453c6aa4542fee1bbacc085ca8c75984ca327b715df3cb4cd149de0  pakchunk86-Win
 d255073ac839acc0833d00c2bd21be9aa96534e4e13a982de2ff97b9056b7988  pakchunk91-WindowsNoEditor_3_P.pak
 
 pak-2020-03-13-steam_xplay
+NOTE: Five of these pakfiles were overwritten by the next patch (for
+DLC2), so these checksums aren't ever actually going to match what's
+on-disk now.
 
-9f86c9398cac2dcdae1d64d91e97e7d61ee17e6be752505658372be92e5850fa  pakchunk0-WindowsNoEditor_5_P.pak
-d5a3aa5f7c70298b048613ce713caa97bfa47dfd7881e528ef4b7840b848e3e5  pakchunk1-WindowsNoEditor_5_P.pak
-0da3c0f8645602bcff914011663f4226d66217039c936a470d49dbd960ddf7e0  pakchunk4-WindowsNoEditor_5_P.pak
-09e8fb5da3ec5654520efa42977fd7bc9b234b2d4b475df0b3e8fffd6d327cb0  pakchunk5-WindowsNoEditor_5_P.pak
-ec0aef62768fe12c1fe5569d9cc54d484209c7f45eba3bf0b464d5c730e195f6  pakchunk6-WindowsNoEditor_5_P.pak
+n/a  pakchunk0-WindowsNoEditor_5_P.pak
+n/a  pakchunk1-WindowsNoEditor_5_P.pak
+n/a  pakchunk4-WindowsNoEditor_5_P.pak
+n/a  pakchunk5-WindowsNoEditor_5_P.pak
+n/a  pakchunk6-WindowsNoEditor_5_P.pak
 10b76bc2886bfa3e199e22dabd33748c7a975ddfd720711eb44eb2379061d1ae  pakchunk83-WindowsNoEditor_4_P.pak
 
 pak-2020-03-26-01-pre_patch
