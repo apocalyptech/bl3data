@@ -87,8 +87,8 @@ might actually refuse to overwrite by default, so be careful with that.)
 ### Massaging the Data
 
 The first thing I tend to do at this point is get rid of files that I
-don't personally care about, to save on spaces.  This'll include audio/
-video and stuff, so if you want that data, maybe don't delete 'em.
+don't personally care about, to save on HD space.  This'll include
+audio/video and stuff, so if you want that data, maybe don't delete 'em.
 Here's the stuff that I tend to delete outright, though (the bottom
 three are found in various subdirs; I just use `find` to remove 'em):
 
@@ -100,12 +100,12 @@ three are found in various subdirs; I just use `find` to remove 'em):
 
 Then, I move any "bare" files in the `extractednew` dir up into the `Game` dir
 (create if needed).  The script we use to get objects into their proper
-paths doesn't like files just on the base dir, and rather than fix the
-util I tend to just move 'em up so they get processed properly.
+paths doesn't like files *just* on the base dir, and rather than fix the
+script, I tend to move 'em up so they get processed properly.
 
 Then there's a bunch of stuff that doesn't really matter at all, at least
 for the data I care about, but I sometimes look into regardless.  The actual
-data objects wil end up getting shuffled around to their "proper" places
+data objects will end up getting shuffled around to their "proper" places
 in a later step anyway, so this basically just deals with files that *aren't*
 `.uasset`/`.uexp`/`.umap`/`.ublk` files.  Regardless, you can probably mostly
 ignore these bits if you want:
@@ -128,14 +128,14 @@ ignore these bits if you want:
 
 ### Put Objects In the Proper Paths
 
-Next, give `gen_normalize_commands.py` a run you'll need to redirect output
-to a file, check that file for the list of commands, and then run those
-commands if they look good.  This'll move all the object files around so
-that the filesystem paths match the in-game object paths.  As mentioned
-above, the matching logic sort of doesn't know what to do with files that
-are  *just* in the root directory; if you've got maps and stuff sitting in
-there, move 'em into a temp directory (I use `Game`).  That or I could fix
-the script, but that probably won't happen.
+Next, give `gen_normalize_commands.py` a run.  You'll want to redirect its
+output to a file, check that file for the list of commands that was
+generated, and then run those commands if they look good.  This'll move
+all the object files around so that the filesystem paths match the in-game
+object paths.  As mentioned above, the matching logic sort of doesn't know what
+to do with files that are  *just* in the root directory; if you've got maps and
+stuff sitting in there, move 'em into a temp directory (I use `Game`).  That or
+I could fix the script, but that probably won't happen.
 
 To get a list of files which the patch is going to overwrite, you can do
 shenanigans like:
@@ -149,9 +149,8 @@ Anyway, once you're feeling good about the re-sorted objects, just copy the
 new data on top of the existing data.
 
 After all this, I'm aware of two objects which *are* wrong, and I'd forgotten
-to investigigate it while testing the whole process again, so for now just fix
-them by hand, if you think you might want to serialize these objects using my
-data library routines.  Specifically, a couple of artifact parts end up with a
+to investigate it while testing the whole process again, so for now just fix
+them by hand.  Specifically, a couple of artifact parts end up with a
 `_2` suffix in their filename.  No idea if that's due to the original filenames
 from the PAK file or not...
 
