@@ -227,7 +227,7 @@ while True:
 		print("Class to get properties of:", end=' ')
 		classToSearch = input()
 		print("")
-		if classToSearch in jsonData:
+		if classToSearch.lower() in jsonData:
 			print(f"Found properties of {classToSearch}")
 			combinedOutput = json.dumps(jsonData[classToSearch.lower()], sort_keys=True).replace('}, ','\n').replace('{','').replace('}]','').replace('[','')
 			print(f"{color_propres}Properties: \n{combinedOutput}")
