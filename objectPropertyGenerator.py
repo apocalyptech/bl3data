@@ -229,7 +229,7 @@ while True:
 		print("")
 		if classToSearch.lower() in jsonData:
 			print(f"Found properties of {classToSearch}")
-			combinedOutput = json.dumps(jsonData[classToSearch.lower()], sort_keys=True).replace('}, ','\n').replace('{','').replace('}]','').replace('[','')
+			combinedOutput = "\n".join(sorted(json.dumps(jsonData[classToSearch.lower()], sort_keys=True).replace('}, ','\n').replace('{','').replace('}]','').replace('[','').split("\n"), key=str.casefold))
 			print(f"{color_propres}Properties: \n{combinedOutput}")
 			continue
 		else:
