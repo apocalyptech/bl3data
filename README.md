@@ -78,6 +78,12 @@ not especially useful to most Windows users, alas.
     the [colorama Python module](https://pypi.org/project/colorama/) to
     work.  Colorama is not required to actually use the utility, though.
 
+- `bl3-obj-dot.py`: Script to serialize an object file using JohnWickParse,
+  generate a [graphviz](https://graphviz.org/) dotfile describing how the
+  object exports relate to each other, and convert that to an image (or
+  to an SVG, if you configure it that way).  See the program comments for
+  specifics.
+
 New-Data Steps
 --------------
 
