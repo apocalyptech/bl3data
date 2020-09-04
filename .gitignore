@@ -3,3 +3,4 @@ extracted
 pak-*/*.pak
 UnrealPak*
 __pycache__
+contents-*.txt.xz
