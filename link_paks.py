@@ -48,6 +48,7 @@ dlc_dirs = {
         'Dandelion': 'AdditionalContent/Dandelion/Paks',
         'Hibiscus': 'AdditionalContent/Hibiscus/Paks',
         'Geranium': 'AdditionalContent/Geranium/Paks',
+        'Alisma': 'AdditionalContent/Alisma/Paks',
         }
 
 # Checksum information.  Using an external binary here on the assumption that it's
