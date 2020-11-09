@@ -35,6 +35,7 @@ dlc1_re = re.compile(r'^Dandelion(_(\d+)_P)?\.pak$')
 dlc2_re = re.compile(r'^Hibiscus(_(\d+)_P)?\.pak$')
 dlc3_re = re.compile(r'^Geranium(_(\d+)_P)?\.pak$')
 dlc4_re = re.compile(r'^Alisma(_(\d+)_P)?\.pak$')
+dlc5_re = re.compile(r'^Ixora(_(\d+)_P)?\.pak$')
 
 dlc_step = 1000
 
@@ -52,39 +53,25 @@ class PakFile(object):
             else:
                 self.patchnum = -1
         else:
-            match = dlc1_re.match(self.filename)
-            if match:
-                self.paknum = 1*dlc_step
-                if match.group(1):
-                    self.patchnum = int(match.group(2))
-                else:
-                    self.patchnum = -1
-            else:
-                match = dlc2_re.match(self.filename)
+            found = False
+            for idx, dlc_re in enumerate([
+                    dlc1_re,
+                    dlc2_re,
+                    dlc3_re,
+                    dlc4_re,
+                    dlc5_re,
+                    ]):
+                match = dlc_re.match(self.filename)
                 if match:
-                    self.paknum = 2*dlc_step
+                    self.paknum = (idx+1)*dlc_step
                     if match.group(1):
                         self.patchnum = int(match.group(2))
                     else:
                         self.patchnum = -1
-                else:
-                    match = dlc3_re.match(self.filename)
-                    if match:
-                        self.paknum = 3*dlc_step
-                        if match.group(1):
-                            self.patchnum = int(match.group(2))
-                        else:
-                            self.patchnum = -1
-                    else:
-                        match = dlc4_re.match(self.filename)
-                        if match:
-                            self.paknum = 4*dlc_step
-                            if match.group(1):
-                                self.patchnum = int(match.group(2))
-                            else:
-                                self.patchnum = -1
-                        else:
-                            raise Exception('Unknown pak file: {}'.format(filename))
+                    found = True
+                    break
+            if not found:
+                raise Exception('Unknown pak file: {}'.format(filename))
         #print('{}: {}, {}'.format(self.filename, self.paknum, self.patchnum))
 
     def __lt__(self, other):
