@@ -15,4 +15,3 @@ pakchunk88-WindowsNoEditor_7_P.pak
 pakchunk89-WindowsNoEditor_7_P.pak
 pakchunk90-WindowsNoEditor_7_P.pak
 pakchunk91-WindowsNoEditor_7_P.pak
-Geranium.pak
