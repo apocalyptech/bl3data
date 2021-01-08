@@ -105,6 +105,7 @@ Don't touch anything below here unless you know what you're doing.
 
 # Version Check
 if sys.version_info < (3, 9):
+    input("\nThis utility requires at least Python 3.9.  Hit Enter to exit.\n")
     raise RuntimeError("This utility requires at least Python 3.9")
 
 # Hardcoded normalizations we have a hard time programmatically determining
@@ -207,13 +208,20 @@ class PakFile:
             program = [WINE, UNREALPAK]
         else:
             program = [UNREALPAK]
-        subprocess.check_call([
-            *program,
-            self.filename,
-            "-extract",
-            destination,
-            f"-cryptokeys={crypto}"
-        ])
+        try:
+            subprocess.check_call([
+                *program,
+                self.filename,
+                "-extract",
+                destination,
+                f"-cryptokeys={crypto}"
+            ])
+        except FileNotFoundError as e:
+            # This is almost certainly because we couldn't find the UnrealPak
+            # executable to run, but the exception given to the user in this
+            # case is rather impenetrable.  Re-raise a different error which
+            # should point them to the actual problem.
+            raise RuntimeError(f"Could not find {program[0]} to unpack pak file: {e}") from None  # noqa: E501
 
     def __lt__(self, other: "PakFile") -> bool:
         return (self.paknum, self.patchnum) < (other.paknum, other.patchnum)
@@ -704,6 +712,7 @@ encryption key.  Do you actually want to proceed?
             print(report_str)
             print("=" * len(report_str) + "\n")
             pakfile.extract(tmp_extract, crypto_path)
+            print(f"Post-processing {pakfile} - this may take awhile...")
             delete_extra_files(tmp_extract)
             normalize_pak_files(tmp_extract)
 
