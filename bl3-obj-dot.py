@@ -60,14 +60,21 @@ dot_output = 'png'
 # Keep track of attribute nodes we've already generated and linked to
 linked_history = set()
 
-def link_path(odf, export_idx, path):
+# Keep track of which exports are involved in links (both to and from)
+seen_exports = set()
+
+# Keep track of linking statements
+link_statements = []
+
+def link_path(export_idx, path):
     """
     Given a `path`, which is a list of attribute references originating from the given
     `export_idx`, write out appropriate attribute nodes and links to those attribute
-    nodes to `odf`.  Uses the global var `linked_history` to keep track of which attribute
+    nodes to `link_statements`.  Uses the global var `linked_history` to keep track of which attribute
     nodes already exist and have been linked-to, so we don't double up on nodes or edges.
     """
     global linked_history
+    global link_statements
     prev_path = 'export_{}'.format(export_idx)
     for i in range(len(path)):
         path_var = '_'.join(path[:i+1])
@@ -75,50 +82,54 @@ def link_path(odf, export_idx, path):
         path_var = path_var.replace(']', '')
         path_var = 'export_{}_{}'.format(export_idx, path_var)
         if path_var not in linked_history:
-            print('{} [label=<{}> shape=ellipse style=filled fillcolor=gold1];'.format(
+            link_statements.append('{} [label=<{}> shape=ellipse style=filled fillcolor=gold1];'.format(
                 path_var,
                 path[i],
-                ), file=odf)
-            print('{} -> {};'.format(prev_path, path_var), file=odf)
+                ))
+            link_statements.append('{} -> {};'.format(prev_path, path_var))
             linked_history.add(path_var)
         prev_path = path_var
     return prev_path
 
-def process_dict(odf, export_idx, data, cur_path):
+def process_dict(export_idx, data, cur_path):
     """
     Processes the given dict `data` (extracted from inside an object JSON), originating
     from inside the export `export_idx`, and create links between exports where
-    appropriate.  Writes to `odf`.  `cur_path` is a list of attribute references
+    appropriate.  Writes to `link_statements`.  `cur_path` is a list of attribute references
     originating from the given export.
     """
     # If we're an export, generate a link
+    global seen_exports
+    global link_statements
     if 'export' in data:
         if data['export'] != 0:
-            from_path = link_path(odf, export_idx, cur_path)
-            print('{} -> {};'.format(from_path, 'export_{}'.format(data['export'])), file=odf)
+            from_path = link_path(export_idx, cur_path)
+            link_statements.append('{} -> {};'.format(from_path, 'export_{}'.format(data['export'])))
+            seen_exports.add(export_idx)
+            seen_exports.add(data['export'])
     else:
         for k, v in data.items():
             if type(v) == dict:
-                process_dict(odf, export_idx, v, list(cur_path) + [k])
+                process_dict(export_idx, v, list(cur_path) + [k])
             elif type(v) == list:
-                process_list(odf, export_idx, v, list(cur_path) + [k])
+                process_list(export_idx, v, list(cur_path) + [k])
             elif type(v) == str or type(v) == int or type(v) == float or type(v) == bool:
                 pass
             else:
                 print('Unknown value type for {} {}: {}'.format(cur_path, k, type(v)))
 
-def process_list(odf, export_idx, data, cur_path):
+def process_list(export_idx, data, cur_path):
     """
     Processes the given list `data` (extracted from inside an object JSON), originating
     from inside the export `export_idx`, and create links between exports where
-    appropriate.  Writes to `odf`.  `cur_path` is a list of attribute references
-    originating from the given export.
+    appropriate.  `cur_path` is a list of attribute references originating from the
+    given export.
     """
     for idx, v in enumerate(data):
         if type(v) == dict:
-            process_dict(odf, export_idx, v, list(cur_path) + ['[{}]'.format(idx)])
+            process_dict(export_idx, v, list(cur_path) + ['[{}]'.format(idx)])
         elif type(v) == list:
-            process_list(odf, export_idx, v, list(cur_path) + ['[{}]'.format(idx)])
+            process_list(export_idx, v, list(cur_path) + ['[{}]'.format(idx)])
         elif type(v) == str or type(v) == int or type(v) == float or type(v) == bool:
             pass
         else:
@@ -142,7 +153,41 @@ json_path = '{}.json'.format(filename)
 if not os.path.exists(json_path):
     raise Exception('Could not find {}'.format(json_path))
 
-# Now loop through and generate a DOT graph
+# Open the JSON and parse it, creating a bunch of statements
+# that we'll print (we do this *first* so that we can strip
+# out any exports which don't end up linking to/from anything)
+with open(json_path) as df:
+    data = json.load(df)
+
+    # First up: construct all the main export node exports
+    export_statements = []
+    for idx, export in enumerate(data):
+        idx += 1
+
+        if export['_jwp_is_asset']:
+            color = 'aquamarine1'
+            asset = ' <i>(asset)</i>'
+        else:
+            color = 'aquamarine3'
+            asset = ''
+        export_title = '{}{}<br/>Type: {}<br/><i>(export {})</i>'.format(
+                export['_jwp_object_name'],
+                asset,
+                export['export_type'],
+                idx,
+                )
+        export_statements.append((idx, 'export_{} [label=<{}> shape=rectangle style=filled fillcolor={}];'.format(
+            idx,
+            export_title,
+            color,
+            )))
+
+    # Next: recursively loop through the structure of each export, to generate links
+    for idx, export in enumerate(data):
+        idx += 1
+        process_dict(idx, export, [])
+
+# Now generate a DOT graph
 dot_path = '{}.dot'.format(filename)
 with open(dot_path, 'wt') as odf:
     if '/' in filename:
@@ -151,44 +196,23 @@ with open(dot_path, 'wt') as odf:
         obj_name = filename
     print('digraph {} {{'.format(obj_name), file=odf)
     print('', file=odf)
+
     print('// Main Graph Label', file=odf)
     print('labelloc = "t";', file=odf)
     print('fontsize = 16;', file=odf)
     print('label = <{}>'.format(obj_name), file=odf)
     print('', file=odf)
-    with open(json_path) as df:
-        data = json.load(df)
 
-        # First pass: construct all the main export nodes
-        print('// Exports', file=odf)
-        for idx, export in enumerate(data):
-            idx += 1
+    print('// Exports', file=odf)
+    for idx, stmt in export_statements:
+        if idx in seen_exports:
+            print(stmt, file=odf)
+    print('', file=odf)
 
-            if export['_jwp_is_asset']:
-                color = 'aquamarine1'
-                asset = ' <i>(asset)</i>'
-            else:
-                color = 'aquamarine3'
-                asset = ''
-            export_title = '{}{}<br/>Type: {}<br/><i>(export {})</i>'.format(
-                    export['_jwp_object_name'],
-                    asset,
-                    export['export_type'],
-                    idx,
-                    )
-            print('export_{} [label=<{}> shape=rectangle style=filled fillcolor={}];'.format(
-                idx,
-                export_title,
-                color,
-                ), file=odf)
-        print('', file=odf)
-
-        # Second pass: recursively loop through the structure of each export, to generate links
-        print('// Attributes and Links', file=odf)
-        for idx, export in enumerate(data):
-            idx += 1
-            process_dict(odf, idx, export, [])
-        print('', file=odf)
+    print('// Attributes and Links', file=odf)
+    for stmt in link_statements:
+        print(stmt, file=odf)
+    print('', file=odf)
 
     print('}', file=odf)
 
