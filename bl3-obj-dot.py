@@ -176,6 +176,11 @@ with open(json_path) as df:
                 export['export_type'],
                 idx,
                 )
+
+        # This might be useful for SCS_Node exports
+        if 'InternalVariableName' in export:
+            export_title += '<br/><i>{}</i>'.format(export['InternalVariableName'])
+
         export_statements.append((idx, 'export_{} [label=<{}> shape=rectangle style=filled fillcolor={}];'.format(
             idx,
             export_title,
