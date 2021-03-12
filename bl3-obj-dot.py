@@ -80,6 +80,8 @@ def link_path(export_idx, path):
         path_var = '_'.join(path[:i+1])
         path_var = path_var.replace('[', '')
         path_var = path_var.replace(']', '')
+        path_var = path_var.replace('(', '')
+        path_var = path_var.replace(')', '')
         path_var = 'export_{}_{}'.format(export_idx, path_var)
         if path_var not in linked_history:
             link_statements.append('{} [label=<{}> shape=ellipse style=filled fillcolor=gold1];'.format(
