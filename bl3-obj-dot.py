@@ -29,6 +29,7 @@
 import os
 import sys
 import json
+import textwrap
 import subprocess
 
 # Script to serialize the specified object file using JohnWickParse, generate a
@@ -182,6 +183,11 @@ with open(json_path) as df:
         # This might be useful for SCS_Node exports
         if 'InternalVariableName' in export:
             export_title += '<br/><i>{}</i>'.format(export['InternalVariableName'])
+
+        # This may be useful for DialogPerformanceData exports
+        if 'Text' in export:
+            lines = textwrap.wrap(export['Text']['string'], width=30)
+            export_title += '<br/><i>"{}"</i>'.format('<br/>'.join(lines))
 
         export_statements.append((idx, 'export_{} [label=<{}> shape=rectangle style=filled fillcolor={}];'.format(
             idx,
