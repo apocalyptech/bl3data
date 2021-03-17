@@ -33,6 +33,11 @@ not especially useful to most Windows users, alas.
     in `pak-2020-03-13-steam_xplay` have been removed, since they'll no
     longer match the live files.
 
+  - I did not purchase any of the "year 2" DLC (Designer's Cut or Director's
+    Cut) on the EGS version, so the EGS checksum file will be missing those.
+    I also ended up removing my EGS install after the 2021-01-21 patch, so
+    those will be missing as well.  PRs are welcome!
+
 - `unpack_bl3.py`: Written in conjunction with [apple1417](https://github.com/apple1417/).
   Used to call `UnrealPak.exe` (optionally via Wine, on Linux) to
   uncompress a bunch of PAK files and arrange them into a file structure
