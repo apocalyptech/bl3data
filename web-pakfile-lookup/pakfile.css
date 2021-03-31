@@ -1,0 +1,21 @@
+
+.results_divider {
+    border: 1px solid black;
+    width: 80%;
+    margin: 1em;
+}
+
+.pakfile_header {
+    color: #065492;
+}
+
+.pakfile_results {
+    margin-left: 1.5em;
+    padding-left: .5em;
+    border-left: .4em solid #249cf9;
+}
+
+.pakfile_pak, .pakfile_pak_text {
+    display: none;
+}
+

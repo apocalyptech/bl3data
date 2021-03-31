@@ -49,9 +49,9 @@ class PakFile(object):
             if match.group(2):
                 self.paknum += 0.5
             if match.group(3):
-                self.patchnum = int(match.group(4))
+                self.patchnum = int(match.group(4))+1
             else:
-                self.patchnum = -1
+                self.patchnum = 0
         else:
             found = False
             for idx, dlc_re in enumerate([
@@ -65,14 +65,18 @@ class PakFile(object):
                 if match:
                     self.paknum = (idx+1)*dlc_step
                     if match.group(1):
-                        self.patchnum = int(match.group(2))
+                        self.patchnum = int(match.group(2))+1
                     else:
-                        self.patchnum = -1
+                        self.patchnum = 0
                     found = True
                     break
             if not found:
                 raise Exception('Unknown pak file: {}'.format(filename))
         #print('{}: {}, {}'.format(self.filename, self.paknum, self.patchnum))
+
+        # This order_num value is only really being used by my pakfile lookup
+        # web thing, though we should maybe just start using it in __lt__ too...
+        self.order_num = self.paknum*10000 + self.patchnum
 
     def __lt__(self, other):
         return (self.paknum, self.patchnum) < (other.paknum, other.patchnum)
