@@ -49,6 +49,10 @@ dlc_dirs = {
         'Hibiscus': 'AdditionalContent/Hibiscus/Paks',
         'Geranium': 'AdditionalContent/Geranium/Paks',
         'Alisma': 'AdditionalContent/Alisma/Paks',
+        # Ordering Ixora2 first to take advantage of Python's newish ordered-by-default
+        # dict behavior, so I don't have to make the code below better (otherwise
+        # Ixora2 will match on Ixora first)
+        'Ixora2': 'AdditionalContent/Ixora2/Paks',
         'Ixora': 'AdditionalContent/Ixora/Paks',
         }
 

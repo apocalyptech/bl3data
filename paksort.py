@@ -36,6 +36,7 @@ dlc2_re = re.compile(r'^Hibiscus(_(\d+)_P)?\.pak$')
 dlc3_re = re.compile(r'^Geranium(_(\d+)_P)?\.pak$')
 dlc4_re = re.compile(r'^Alisma(_(\d+)_P)?\.pak$')
 dlc5_re = re.compile(r'^Ixora(_(\d+)_P)?\.pak$')
+dlc6_re = re.compile(r'^Ixora2(_(\d+)_P)?\.pak$')
 
 dlc_step = 1000
 
@@ -60,6 +61,7 @@ class PakFile(object):
                     dlc3_re,
                     dlc4_re,
                     dlc5_re,
+                    dlc6_re,
                     ]):
                 match = dlc_re.match(self.filename)
                 if match:

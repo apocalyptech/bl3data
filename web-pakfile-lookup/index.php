@@ -138,6 +138,7 @@ $page->set_title('Borderlands 3 Pakfile Contents Lookup');
 $page->add_css('pakfile.css', 1);
 $page->add_js('pakfile.js', 1);
 $page->add_changelog('March 31, 2021', 'Initial release (data current through Jan 21, 2021\'s patch)');
+$page->add_changelog('April 8, 2021', 'Updated with DLC6 (Director\'s Cut) data');
 $page->apoc_header();
 
 if (count($errors) > 0)

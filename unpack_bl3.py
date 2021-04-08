@@ -146,7 +146,7 @@ class PakFile:
         r"^(?P<dir_prefix>.*[/\\])?pakchunk(?P<datagroup>\d+)(?P<optional>optional)?-WindowsNoEditor(_(?P<patchnum>\d+)_P)?\.pak$"  # noqa: E501
     )
     re_dlc: ClassVar[re.Pattern[str]] = re.compile(
-        r"^(?P<dir_prefix>.*[/\\])?(?P<dlcname>Dandelion|Hibiscus|Geranium|Alisma|Ixora)(_(?P<patchnum>\d+)_P)?\.pak$"  # noqa: E501
+        r"^(?P<dir_prefix>.*[/\\])?(?P<dlcname>Dandelion|Hibiscus|Geranium|Alisma|Ixora|Ixora2)(_(?P<patchnum>\d+)_P)?\.pak$"  # noqa: E501
     )
     dlc_nums: ClassVar[Dict[str, int]] = {
         "Dandelion": 1,
@@ -154,6 +154,7 @@ class PakFile:
         "Geranium": 3,
         "Alisma": 4,
         "Ixora": 5,
+        "Ixora2": 6,
     }
     dlc_step: ClassVar[int] = 1000
 
