@@ -14,7 +14,7 @@
 #       names of its contributors may be used to endorse or promote products
 #       derived from this software without specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND  # noqa: E501
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 # DISCLAIMED. IN NO EVENT SHALL APPLE1417 OR APOCALYPTECH BE LIABLE FOR ANY
@@ -129,6 +129,11 @@ if WINEPREFIX:
     os.environ["WINEPREFIX"] = WINEPREFIX
 
 STEAM_APP_ID = 397540
+
+# /Game/Audio/Events/Characters/Player/BeastMaster/Char_BeastMaster/Anim/Skill_Screen/Abilities/WE_Char_Beastmaster_Anim_Skillscreen_Rakk_Attack_Proj_Start_Vox.uasset  # noqa: E501
+# Technically it would be more correct to store the longest path in each pak
+# somewhere, but generally people are going to extract everything anyway
+LONGEST_PATH_LEN = 164
 
 # Number suffix regex -- used in `get_actual_location()`
 re_num_suffix = re.compile(r"(?P<numsuffix>_\d+)$")
@@ -536,6 +541,12 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--no-path-len-check",
+        action="store_true",
+        help="Don't check maximum pathname length before doing extraction",
+    )
+
+    parser.add_argument(
         "path",
         nargs="*",
         help="""
@@ -621,6 +632,24 @@ if __name__ == "__main__":
 WARNING: We predict that the extraction will take {}G of free space, but it
 looks like only {}G is currently available.
 """[1:].format(required_gb, free_gb))
+
+                user_input = input(
+                    "Proceed with extraction anyway [y/N]? "
+                ).strip()[:1].lower()
+                if user_input != "y":
+                    print("\nOkay, exiting...\n")
+                    sys.exit(1)
+
+        # Check if the extraction may result in a pathname that's too long
+        if not args.no_path_len_check:
+            max_path_len = 260 if platform.system() == "Windows" else 4096
+            extract_path_len = len(final_extract) + LONGEST_PATH_LEN
+
+            if extract_path_len > max_path_len:
+                print("""
+WARNING: We predict that the extraction will create a file path of length {},
+which is greater than the system maximum {}. This may cause extraction to fail.
+"""[1:].format(extract_path_len, max_path_len))
 
                 user_input = input(
                     "Proceed with extraction anyway [y/N]? "
