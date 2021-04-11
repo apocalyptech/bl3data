@@ -642,7 +642,8 @@ looks like only {}G is currently available.
 
         # Check if the extraction may result in a pathname that's too long
         if not args.no_path_len_check:
-            max_path_len = 260 if platform.system() == "Windows" else 4096
+            # Using wine still inherits the windows max len
+            max_path_len = 260
             extract_path_len = len(final_extract) + LONGEST_PATH_LEN
 
             if extract_path_len > max_path_len:
