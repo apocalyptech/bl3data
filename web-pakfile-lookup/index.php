@@ -139,6 +139,7 @@ $page->add_css('pakfile.css', 1);
 $page->add_js('pakfile.js', 1);
 $page->add_changelog('March 31, 2021', 'Initial release (data current through Jan 21, 2021\'s patch)');
 $page->add_changelog('April 8, 2021', 'Updated with DLC6 (Director\'s Cut) data');
+$page->add_changelog('May 15, 2021', 'Added link to Google Drive textfile archive');
 $page->apoc_header();
 
 if (count($errors) > 0)
@@ -160,7 +161,9 @@ This page can be used to find which pakfiles contain which Borderlands 3 game ob
 interested in <a href="https://github.com/BLCM/BLCMods/wiki/Accessing-Borderlands-3-Data">accessing
 Borderlands 3 data</a> for modding purposes, but who doesn't want to unpack literally
 everything.  Using this page you can find out the specific pakfile which has what you
-want and unpack just that one.
+want and unpack just that one.  Text files which describe pakfile contents are also
+available <a href="https://drive.google.com/drive/folders/1ptNlbvCc79X68j2VLqNPEUiP87JU4Nz7?usp=sharing">via
+this Google Drive link</a>.
 </p>
 
 <p>
