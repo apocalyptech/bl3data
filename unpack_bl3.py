@@ -28,7 +28,6 @@
 import argparse
 import base64
 import fnmatch
-import glob
 import hashlib
 import json
 import math
@@ -36,11 +35,10 @@ import os
 import platform
 import re
 import shutil
-import struct
 import subprocess
 import sys
+import time
 import traceback
-from io import SEEK_CUR
 from typing import ClassVar, Dict, List, Optional, Set, Tuple, cast
 
 if platform.system() == "Windows":
@@ -108,11 +106,6 @@ if sys.version_info < (3, 9):
     input("\nThis utility requires at least Python 3.9.  Hit Enter to exit.\n")
     raise RuntimeError("This utility requires at least Python 3.9")
 
-# Hardcoded normalizations we have a hard time programmatically determining
-HARDCODED_NORMALIZATIONS = {
-    "//ECHOTheme_35": "/Game/PlayerCharacters/_Customizations/EchoDevice/ECHOTheme_35",  # noqa: E501
-}
-
 # When excluding *.wem-only pakfiles entirely, and after deleting all the
 # default stuff specified in EXTRACTED_*_TO_DELETE, this is the ratio of pakfile
 # size to extracted size. (For reference, after the release of DLC5, it's 79GB
@@ -135,8 +128,6 @@ STEAM_APP_ID = 397540
 # somewhere, but generally people are going to extract everything anyway
 LONGEST_PATH_LEN = 164
 
-# Number suffix regex -- used in `get_actual_location()`
-re_num_suffix = re.compile(r"(?P<numsuffix>_\d+)$")
 # Regex used to extract steam library locations from the `libraryfolders.vdf`
 re_steam_libraries = re.compile(r"\t+\"\d+\"\t+\"(.+?)\"")
 
@@ -152,6 +143,21 @@ class PakFile:
     )
     re_dlc: ClassVar[re.Pattern[str]] = re.compile(
         r"^(?P<dir_prefix>.*[/\\])?(?P<dlcname>Dandelion|Hibiscus|Geranium|Alisma|Ixora|Ixora2)(_(?P<patchnum>\d+)_P)?\.pak$"  # noqa: E501
+    )
+    re_unpack_mount: ClassVar[re.Pattern[str]] = re.compile(
+        r"Display: Mount point (?P<mountpoint>.*)$"
+    )
+    re_unpack_file: ClassVar[re.Pattern[str]] = re.compile(
+        r'Display: "(?P<filename>.*)" offset'
+    )
+    re_normalize_plugins: ClassVar[re.Pattern[str]] = re.compile(
+        r"^(?P<firstpart>\w+)/Plugins/(?P<lastpart>.*)\s*$"
+    )
+    re_normalize_content: ClassVar[re.Pattern[str]] = re.compile(
+        r"^(?P<junk>.*/)?(?P<firstpart>\w+)/Content/(?P<lastpart>.*)\s*$"
+    )
+    re_extract: ClassVar[re.Pattern[str]] = re.compile(
+        r'Display: Extracted "(?P<filename>.*?)" to '
     )
     dlc_nums: ClassVar[Dict[str, int]] = {
         "Dandelion": 1,
@@ -204,24 +210,103 @@ class PakFile:
         """
         return self.paknum in self.audio_nums
 
-    def extract(self, destination: str, crypto: str) -> None:
+    def extract(self, destination: str, crypto: str) -> Dict[str, str]:
         """
         Call the UnrealPak executable (using Wine if requested, on Linux) to
         extract this pakfile into the `destination` directory.  Use `crypto` as
-        the UnrealPak crypto config JSON file.
+        the UnrealPak crypto config JSON file.  Returns a dictionary whose
+        keys are the "raw" filenames extracted, and whose values are the
+        normalized locations seen by the game itself (so object paths will
+        match the file paths, for instance).
         """
         if WINE is not None:
             program = [WINE, UNREALPAK]
         else:
             program = [UNREALPAK]
         try:
-            subprocess.check_call([
+
+            # First up: list the pak contents so we can determine the
+            # real on-disk locations the files should go to.  We can't
+            # get the mountpoint information without doing a separate
+            # `-list`, alas.
+            print("  Getting pakfile contents")
+            mountpoint = None
+            filename_mapping = {}
+            p = subprocess.Popen([
+                *program,
+                self.filename,
+                "-list",
+                f"-cryptokeys={crypto}"
+            ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+                )
+            for line in iter(p.stdout.readline, ''):
+                if match := self.re_unpack_mount.search(line):
+                    mountpoint = match.group('mountpoint')
+                    if mountpoint.startswith('../../../'):
+                        mountpoint = mountpoint[9:]
+                    elif mountpoint == '/':
+                        # This seems to only ever show up in "empty" pakfiles, so it
+                        # doesn't really matter.
+                        mountpoint = ''
+                elif match := self.re_unpack_file.search(line):
+                    if mountpoint is None:
+                        raise RuntimeError("Found filename without knowing prefix")
+                    filename = match.group('filename')
+
+                    # Normalize the filename to find its eventual "real" destination
+                    real_filename = f'{mountpoint}{filename}'
+                    if pluginmatch := self.re_normalize_plugins.match(real_filename):
+                        real_filename = pluginmatch.group('lastpart')
+                    if contentmatch := self.re_normalize_content.match(real_filename):
+                        firstpart = contentmatch.group('firstpart')
+                        lastpart = contentmatch.group('lastpart')
+                        # A couple of hardcodes in here, alas
+                        if firstpart == 'OakGame':
+                            firstpart = 'Game'
+                        elif firstpart == 'Wwise':
+                            firstpart = 'WwiseEditor'
+                        real_filename = f'{firstpart}/{lastpart}'
+                    #print(f'  - {filename} -> {real_filename}')
+                    filename_mapping[filename] = real_filename
+
+            # Create our extraction directory if needed
+            if not os.path.exists(destination):
+                os.makedirs(destination, exist_ok=True)
+
+            # Now do the unpacking
+            last_report_time = 0
+            print(f"  Unpacking files\r", end="")
+            total_files = len(filename_mapping)
+            files_unpacked = 0
+            p = subprocess.Popen([
                 *program,
                 self.filename,
                 "-extract",
                 destination,
                 f"-cryptokeys={crypto}"
-            ])
+            ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+                )
+            for line in iter(p.stdout.readline, ''):
+                if match := self.re_extract.search(line):
+                    filename = match.group('filename')
+                    if filename not in filename_mapping:
+                        raise RuntimeError(f"Unexpected filename extracted: {filename}")
+                    now = time.time()
+                    if files_unpacked % 50 == 0 or now > last_report_time + 1:
+                        print(f"  Unpacking files: {files_unpacked}/{total_files}\r", end="")
+                        last_report_time = now
+                    files_unpacked += 1
+            print(f"  Unpacking files: {files_unpacked}/{total_files}")
+            if files_unpacked != total_files:
+                raise RuntimeError(f"Expected {total_files} files, only found {files_unpacked}")
+
+            return filename_mapping
         except FileNotFoundError as e:
             # This is almost certainly because we couldn't find the UnrealPak
             # executable to run, but the exception given to the user in this
@@ -241,121 +326,38 @@ def delete_extra_files(folder: str) -> None:
     Given a folder, loop through and delete any files that we don't actually
     want to see in the final extraction.
     """
+    files_deleted = 0
+    dirs_deleted = 0
     for dirpath, dirnames, filenames in os.walk(folder):
         for pattern in EXTRACTED_FILES_TO_DELETE:
             for filename in fnmatch.filter(filenames, pattern):
                 os.remove(os.path.join(dirpath, filename))
+                files_deleted += 1
         for pattern in EXTRACTED_DIRS_TO_DELETE:
             for dirname in fnmatch.filter(dirnames, pattern):
                 shutil.rmtree(
                     os.path.join(dirpath, dirname),
                     ignore_errors=True
                 )
+                dirs_deleted += 1
 
-
-def get_symbols(full_path: str) -> Dict[str, str]:
-    """
-    Given a filename, extract UE symbols from it.  This is very hand-wavey and
-    probably skips over a bunch of string fields which just happen to be
-    zero-length in all BL3 `.uasset` files.  It may fail on non-BL3 pakfiles
-    (or even future BL3 pakfiles, depending on how they get exported).
-
-    Returns a dictonary mapping each symbol in lowercase to it's actual
-    capitalization.  This allows for easy case-insensitive compares.
-    """
-    syms = {}
-    with open(full_path, "rb") as datafile:
-
-        def read_int() -> int:
-            return cast(int, struct.unpack('<i', datafile.read(4))[0])
-
-        def read_str() -> str:
-            strlen = read_int()
-            if strlen < 0:
-                strlen = abs(strlen)
-                return datafile.read(strlen * 2)[:-2].decode('utf_16_le')
-            else:
-                return datafile.read(strlen)[:-1].decode('latin1')
-
-        datafile.seek(28)
-        read_str()
-        datafile.seek(80, SEEK_CUR)
-        num_symbols = read_int()
-        datafile.seek(72, SEEK_CUR)
-        for _ in range(num_symbols):
-            sym = read_str()
-            syms[sym.lower()] = sym
-            read_int()
-
-    return syms
-
-
-def get_symbol_hits(symbols: Dict[str, str], match_str: str) -> Set[str]:
-    """
-    Given a dictionary of UE symbols, as extracted by `get_symbols()`, return a
-    set of all the ones which match the given `match_str`.
-    """
-    hits = set()
-    for sym in symbols.keys():
-        if sym.endswith(match_str):
-            hits.add(sym)
-    return hits
-
-
-def get_actual_location(full_path: str, game_folder: str, name: str) -> Optional[str]:  # noqa: E501
-    """
-    Given a file with a full pathname of `full_path`, a current `game_folder`,
-    and object name `name`, return the `game_folder` that it *should* be in.
-    """
-    extension = os.path.splitext(name)[1]
-    if extension not in (".uasset", ".umap"):
-        return None
-    base_obj_name = name.removesuffix(extension)
-
-    predicted_name = "/" + game_folder.replace("\\", "/") + "/" + base_obj_name
-    predicted_name_lower = predicted_name.lower()
-
-    if predicted_name in HARDCODED_NORMALIZATIONS:
-        return HARDCODED_NORMALIZATIONS[predicted_name]
-
-    symbols = get_symbols(full_path)
-
-    if predicted_name_lower in symbols:
-        return None
-
-    # First check for the predicted name as-given (including with any possible
-    # number suffix). If we don't find a decent match then, and the name *has* a
-    # number suffix, we can move on to seeing if we get a fuzzier match without.
-    predicted_names: List[Tuple[str, Optional[str]]] = [
-        (predicted_name_lower, None)
-    ]
-    suffix_match = re_num_suffix.search(predicted_name_lower)
-    if suffix_match is not None:
-        predicted_names.append((
-            predicted_name_lower.removesuffix(suffix_match.group("numsuffix")),
-            suffix_match.group("numsuffix")
-        ))
-
-    # Here's the loop where we're checking
-    for current_prediction, extra_suffix in predicted_names:
-        parts = current_prediction.split("/")
-        for idx in range(1, len(parts)):
-            match_str = "/" + "/".join(parts[idx:])
-            hits = get_symbol_hits(symbols, match_str)
-            if len(hits) == 1:
-                hit = hits.pop()
-                if hit == current_prediction:
-                    return None
-                if extra_suffix:
-                    return f"{symbols[hit]}{extra_suffix}"
-                else:
-                    return symbols[hit]
-            elif len(hits) > 1:
-                raise RuntimeError(
-                    f"Multiple matches for '{match_str}' in file {full_path}"
-                )
-
-    return None
+    reports = []
+    if files_deleted > 0:
+        if files_deleted == 1:
+            files_plural = ''
+        else:
+            files_plural = 's'
+        reports.append(f"{files_deleted} file{files_plural}")
+    if dirs_deleted > 0:
+        if dirs_deleted == 1:
+            dirs_plural = ''
+        else:
+            dirs_plural = 's'
+        reports.append(f"{dirs_deleted} dir{dirs_plural}")
+    if len(reports) > 0:
+        print("  Pruned {} per config".format(
+            " and ".join(reports),
+            ))
 
 
 def delete_empty_dirs(folder: str, delete_root: bool = True) -> bool:
@@ -382,37 +384,30 @@ def delete_empty_dirs(folder: str, delete_root: bool = True) -> bool:
     return False
 
 
-def normalize_pak_files(folder: str) -> None:
+def normalize_pak_files(temp_folder: str, final_folder: str, filename_mapping: Dict[str, str]) -> None:
     """
-    Given a folder, loop through and attempt to move the extracted data files
-    into a folder structure which matches their actual in-game object location.
+    Move extracted pakfile contents from their temporary extraction point
+    `temp_folder`, into their ultimate destination `final_folder`, using
+    `filename_mapping` to translate the paths to their in-game values.
+    Will attempt to clear out `temp_folder` afterwards, and will raise
+    a RuntimeError if unable to do so.
     """
-    moves = {}
-    for dirpath, _, filenames in os.walk(folder):
-        game_folder = os.path.relpath(dirpath, folder)
-        if game_folder == ".":
-            game_folder = ""
-        for filename in filenames:
-            full_path = os.path.join(dirpath, filename)
-            actual = get_actual_location(full_path, game_folder, filename)
-            if actual is None:
-                continue
+    for temp_filename, final_filename in filename_mapping.items():
+        temp_filename_full = os.path.join(temp_folder, temp_filename)
+        if os.path.exists(temp_filename_full):
+            final_filename_full = os.path.join(final_folder, final_filename)
 
-            if actual[0] == "/":
-                actual = actual[1:]
-            actual = actual.replace("/", os.path.sep)
+            # Normalize for OS
+            final_filename_full = final_filename_full.replace("/", os.path.sep)
+            temp_filename_full = temp_filename_full.replace("/", os.path.sep)
 
-            new_path = os.path.join(folder, actual)
-            moves[os.path.splitext(full_path)[0]] = new_path
+            # Do the moves
+            final_dirname = os.path.dirname(final_filename_full)
+            os.makedirs(final_dirname, exist_ok=True)
+            os.rename(temp_filename_full, final_filename_full)
 
-    for src, dst in moves.items():
-        os.makedirs(os.path.dirname(dst), exist_ok=True)
-        for filename in glob.glob(src + ".*"):
-            extension = os.path.splitext(filename)[1]
-            shutil.move(src + extension, dst + extension)
-
-    delete_empty_dirs(folder, delete_root=False)
-
+    if not delete_empty_dirs(temp_folder):
+        raise RuntimeError(f"Could not delete temporary folder {temp_folder}")
 
 def get_install_paks(installroot: str) -> List[str]:
     """
@@ -602,7 +597,18 @@ if __name__ == "__main__":
         # Do we actually have files to work with?
         if not all_pak_files:
             raise ValueError("No pakfiles found to process!")
-        print(f"\nProcessing {len(all_pak_files)} pakfiles from {report}\n")
+        print(f"\nProcessing {len(all_pak_files)} pakfiles from {report}")
+        print("")
+        if len(EXTRACTED_FILES_TO_DELETE) > 0:
+            print("Pruning files matching:")
+            for pattern in EXTRACTED_FILES_TO_DELETE:
+                print(f" - {pattern}")
+            print("")
+        if len(EXTRACTED_DIRS_TO_DELETE) > 0:
+            print("Pruning directories matching:")
+            for pattern in EXTRACTED_DIRS_TO_DELETE:
+                print(f" - {pattern}")
+            print("")
 
         # Create our final extraction dir, if need be.
         final_extract = os.path.abspath(args.extract_to)
@@ -728,12 +734,11 @@ encryption key.  Do you actually want to proceed?
 
             print(f"\nCreated '{args.crypto}'!  Continuing...\n")
 
-        # Set up our temporary extraction subdir (clear it out, first)
+        # Set up our temporary extraction subdir location (clear it out, first)
         tmp_extract = os.path.abspath(
             os.path.join(args.extract_to, "_unpack_bl3_tmp")
         )
         shutil.rmtree(tmp_extract, ignore_errors=True)
-        os.makedirs(tmp_extract, exist_ok=True)
 
         crypto_path = os.path.abspath(args.crypto)
 
@@ -742,19 +747,12 @@ encryption key.  Do you actually want to proceed?
             report_str = f"Processing file {pakfile}..."
             print(report_str)
             print("=" * len(report_str) + "\n")
-            pakfile.extract(tmp_extract, crypto_path)
-            print(f"Post-processing {pakfile} - this may take awhile...")
+            filename_mapping = pakfile.extract(tmp_extract, crypto_path)
             delete_extra_files(tmp_extract)
-            normalize_pak_files(tmp_extract)
-
-            # shutil.move() will move inside the destination dir
-            shutil.copytree(tmp_extract, final_extract, dirs_exist_ok=True)
-            shutil.rmtree(tmp_extract, ignore_errors=True)
-            os.makedirs(tmp_extract, exist_ok=True)
-
+            print("  Moving files to in-game locations")
+            normalize_pak_files(tmp_extract, final_extract, filename_mapping)
+            print("  Done!")
             print()
-
-        shutil.rmtree(tmp_extract, ignore_errors=True)
 
     except Exception as e:
         print("""
