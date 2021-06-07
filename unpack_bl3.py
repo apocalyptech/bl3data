@@ -210,6 +210,10 @@ class PakFile:
     # Which datagroups/paknums *only* ever contain *.wem audio data
     audio_nums: ClassVar[set[int]] = {2, 3, 85, 86, 87, 88, 89, 90, 91}
 
+    # There are a few instances of extracted directories which get translated
+    # to another name; I have no idea how to programmatically determine these.
+    # OakGame -> Game is one of the biggest ones, of course.  I would not
+    # be surprised if there were others which could be added here.
     content_firstpart_overrides: ClassVar[dict[str, str]] = {
         "OakGame": "Game",
         "Wwise": "WwiseEditor",
@@ -266,10 +270,14 @@ class PakFile:
         return self.paknum in self.audio_nums
 
     def get_filename_mapping(self, crypto: str) -> dict[str, str]:
-        # First up: list the pak contents so we can determine the
-        # real on-disk locations the files should go to.  We can't
-        # get the mountpoint information without doing a separate
-        # `-list`, alas.
+        """
+        Reads pakfile contents (using UnrealPak.exe's `-list` option) and
+        massages the filenames to be their actual in-game locations.  Pass
+        in `crypto` as the pathname to the crypto config that UnrealPak
+        needs.  Will return a dict whose keys are the "raw" filenames listed
+        in the pakfile, and whose values are the in-game locations.
+        """
+
         print("  Getting pakfile contents")
 
         p = launch_unrealpak(self.filename, "-list", f"-cryptokeys={crypto}")
@@ -322,10 +330,9 @@ class PakFile:
         """
         Call the UnrealPak executable (using Wine if requested, on Linux) to
         extract this pakfile into the `destination` directory.  Use `crypto` as
-        the UnrealPak crypto config JSON file.  Returns a dictionary whose
-        keys are the "raw" filenames extracted, and whose values are the
-        normalized locations seen by the game itself (so object paths will
-        match the file paths, for instance).
+        the UnrealPak crypto config JSON file.  Pass in `expected_filenames`
+        to have the extraction doublecheck what files are actually extracted;
+        if any mismatches are found, a RuntimeError will be raised.
         """
 
         # Create our extraction directory if needed
