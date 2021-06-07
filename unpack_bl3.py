@@ -25,6 +25,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import annotations
+
 import argparse
 import base64
 import fnmatch
@@ -39,7 +41,8 @@ import subprocess
 import sys
 import time
 import traceback
-from typing import ClassVar, Dict, List, Optional, Set, Tuple, cast
+from collections.abc import Collection
+from typing import ClassVar, Optional, cast
 
 if platform.system() == "Windows":
     import winreg
@@ -66,18 +69,18 @@ CRYPTO = r"crypto.json"
 # If you only want to extract certain files/dirs, add them here
 # This can be either a directory containing `.pak` files, or
 # a path to a pakfile itself.
-CUSTOM_PATH_LIST: List[str] = [
+CUSTOM_PATH_LIST: list[str] = [
 
 ]
 
 # Files/Directories to remove after doing the extraction (to
 # save on some diskspace)
-EXTRACTED_FILES_TO_DELETE: List[str] = [
+EXTRACTED_FILES_TO_DELETE: list[str] = [
     "*.wem",
     "*.bnk",
     "*ShaderArchive*",
 ]
-EXTRACTED_DIRS_TO_DELETE: List[str] = [
+EXTRACTED_DIRS_TO_DELETE: list[str] = [
     "*PipelineCaches*",
     "*TritonData*",
 ]
@@ -96,6 +99,7 @@ WINEPREFIX: Optional[str] = None
 if LINUX_USE_WINE and platform.system() == "Linux":
     WINE = "wine64"
     WINEPREFIX = "/usr/local/winex/testing"
+
 """
 Don't touch anything below here unless you know what you're doing.
 ================================================================================
@@ -148,7 +152,7 @@ class PakFile:
         r"Display: Mount point (?P<mountpoint>.*)$"
     )
     re_unpack_file: ClassVar[re.Pattern[str]] = re.compile(
-        r'Display: "(?P<filename>.*)" offset'
+        r"Display: \"(?P<filename>.*)\" offset"
     )
     re_normalize_plugins: ClassVar[re.Pattern[str]] = re.compile(
         r"^(?P<firstpart>\w+)/Plugins/(?P<lastpart>.*)\s*$"
@@ -157,9 +161,9 @@ class PakFile:
         r"^(?P<junk>.*/)?(?P<firstpart>\w+)/Content/(?P<lastpart>.*)\s*$"
     )
     re_extract: ClassVar[re.Pattern[str]] = re.compile(
-        r'Display: Extracted "(?P<filename>.*?)" to '
+        r"Display: Extracted \"(?P<filename>.*?)\" to "
     )
-    dlc_nums: ClassVar[Dict[str, int]] = {
+    dlc_nums: ClassVar[dict[str, int]] = {
         "Dandelion": 1,
         "Hibiscus": 2,
         "Geranium": 3,
@@ -170,7 +174,12 @@ class PakFile:
     dlc_step: ClassVar[int] = 1000
 
     # Which datagroups/paknums *only* ever contain *.wem audio data
-    audio_nums: ClassVar[Set[int]] = {2, 3, 85, 86, 87, 88, 89, 90, 91}
+    audio_nums: ClassVar[set[int]] = {2, 3, 85, 86, 87, 88, 89, 90, 91}
+
+    content_firstpart_overrides: ClassVar[dict[str, str]] = {
+        "OakGame": "Game",
+        "Wwise": "WwiseEditor",
+    }
 
     filename: str
     paknum: float
@@ -210,7 +219,56 @@ class PakFile:
         """
         return self.paknum in self.audio_nums
 
-    def extract(self, destination: str, crypto: str) -> Dict[str, str]:
+    def get_filename_mapping(self, crypto: str) -> dict[str, str]:
+        # First up: list the pak contents so we can determine the
+        # real on-disk locations the files should go to.  We can't
+        # get the mountpoint information without doing a separate
+        # `-list`, alas.
+        print("  Getting pakfile contents")
+
+        p = launch_unrealpak(self.filename, "-list", f"-cryptokeys={crypto}")
+
+        filename_mapping = {}
+        mountpoint: str
+        for line in iter(p.stdout.readline, ""):  # type: ignore
+            if match := self.re_unpack_mount.search(line):
+                mountpoint = match.group("mountpoint")
+                if mountpoint.startswith("../../../"):
+                    mountpoint = mountpoint[9:]
+                elif mountpoint == "/":
+                    # This seems to only ever show up in "empty" pakfiles,
+                    # so it doesn't really matter.
+                    mountpoint = ""
+
+            elif match := self.re_unpack_file.search(line):
+                if mountpoint is None:
+                    raise RuntimeError("Found filename without knowing prefix")
+                filename = match.group("filename")
+
+                # Normalize the filename to find its "real" destination
+                real_filename = f"{mountpoint}{filename}"
+                if pluginmatch := self.re_normalize_plugins.match(real_filename):  # noqa: E501
+                    real_filename = pluginmatch.group("lastpart")
+                if contentmatch := self.re_normalize_content.match(real_filename):  # noqa: E501
+                    firstpart = contentmatch.group("firstpart")
+                    lastpart = contentmatch.group("lastpart")
+
+                    # A couple of hardcodes in here, alas
+                    if firstpart in self.content_firstpart_overrides:
+                        firstpart = self.content_firstpart_overrides[firstpart]
+
+                    real_filename = f"{firstpart}/{lastpart}"
+
+                filename_mapping[filename] = real_filename
+
+        return filename_mapping
+
+    def extract(
+        self,
+        destination: str,
+        crypto: str,
+        expected_filenames: Optional[Collection[str]] = None
+    ) -> None:
         """
         Call the UnrealPak executable (using Wine if requested, on Linux) to
         extract this pakfile into the `destination` directory.  Use `crypto` as
@@ -219,106 +277,91 @@ class PakFile:
         normalized locations seen by the game itself (so object paths will
         match the file paths, for instance).
         """
-        if WINE is not None:
-            program = [WINE, UNREALPAK]
-        else:
-            program = [UNREALPAK]
-        try:
 
-            # First up: list the pak contents so we can determine the
-            # real on-disk locations the files should go to.  We can't
-            # get the mountpoint information without doing a separate
-            # `-list`, alas.
-            print("  Getting pakfile contents")
-            mountpoint = None
-            filename_mapping = {}
-            p = subprocess.Popen([
-                *program,
-                self.filename,
-                "-list",
-                f"-cryptokeys={crypto}"
-            ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding="utf-8",
-                )
-            for line in iter(p.stdout.readline, ''):
-                if match := self.re_unpack_mount.search(line):
-                    mountpoint = match.group('mountpoint')
-                    if mountpoint.startswith('../../../'):
-                        mountpoint = mountpoint[9:]
-                    elif mountpoint == '/':
-                        # This seems to only ever show up in "empty" pakfiles, so it
-                        # doesn't really matter.
-                        mountpoint = ''
-                elif match := self.re_unpack_file.search(line):
-                    if mountpoint is None:
-                        raise RuntimeError("Found filename without knowing prefix")
-                    filename = match.group('filename')
+        # Create our extraction directory if needed
+        if not os.path.exists(destination):
+            os.makedirs(destination, exist_ok=True)
 
-                    # Normalize the filename to find its eventual "real" destination
-                    real_filename = f'{mountpoint}{filename}'
-                    if pluginmatch := self.re_normalize_plugins.match(real_filename):
-                        real_filename = pluginmatch.group('lastpart')
-                    if contentmatch := self.re_normalize_content.match(real_filename):
-                        firstpart = contentmatch.group('firstpart')
-                        lastpart = contentmatch.group('lastpart')
-                        # A couple of hardcodes in here, alas
-                        if firstpart == 'OakGame':
-                            firstpart = 'Game'
-                        elif firstpart == 'Wwise':
-                            firstpart = 'WwiseEditor'
-                        real_filename = f'{firstpart}/{lastpart}'
-                    #print(f'  - {filename} -> {real_filename}')
-                    filename_mapping[filename] = real_filename
+        # Now do the unpacking
+        print("  Unpacking files\r", end="")
 
-            # Create our extraction directory if needed
-            if not os.path.exists(destination):
-                os.makedirs(destination, exist_ok=True)
+        p = launch_unrealpak(
+            self.filename,
+            "-extract",
+            destination,
+            f"-cryptokeys={crypto}"
+        )
 
-            # Now do the unpacking
-            last_report_time = 0
-            print(f"  Unpacking files\r", end="")
-            total_files = len(filename_mapping)
-            files_unpacked = 0
-            p = subprocess.Popen([
-                *program,
-                self.filename,
-                "-extract",
-                destination,
-                f"-cryptokeys={crypto}"
-            ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding="utf-8",
-                )
-            for line in iter(p.stdout.readline, ''):
-                if match := self.re_extract.search(line):
-                    filename = match.group('filename')
-                    if filename not in filename_mapping:
-                        raise RuntimeError(f"Unexpected filename extracted: {filename}")
-                    now = time.time()
-                    if files_unpacked % 50 == 0 or now > last_report_time + 1:
-                        print(f"  Unpacking files: {files_unpacked}/{total_files}\r", end="")
-                        last_report_time = now
-                    files_unpacked += 1
+        files_unpacked = 0
+        total_files = len(expected_filenames) if expected_filenames else None
+
+        last_report_time = 0.0
+
+        for line in iter(p.stdout.readline, ""):  # type: ignore
+            if match := self.re_extract.search(line):
+                filename = match.group("filename")
+                if expected_filenames and filename not in expected_filenames:
+                    raise RuntimeError(
+                        f"Unexpected filename extracted: {filename}"
+                    )
+
+                now = time.time()
+                if files_unpacked % 50 == 0 or now > last_report_time + 1:
+                    if total_files:
+                        print(
+                            f"  Unpacking files: {files_unpacked}/{total_files}\r",  # noqa: E501
+                            end=""
+                        )
+                    else:
+                        print(f"  Unpacking files: {files_unpacked}\r", end="")
+                    last_report_time = now
+
+                files_unpacked += 1
+
+        if total_files:
             print(f"  Unpacking files: {files_unpacked}/{total_files}")
             if files_unpacked != total_files:
-                raise RuntimeError(f"Expected {total_files} files, only found {files_unpacked}")
+                raise RuntimeError(
+                    f"Expected {total_files} files, only found {files_unpacked}"
+                )
+        else:
+            print(f"  Unpacking files: {files_unpacked}")
 
-            return filename_mapping
-        except FileNotFoundError as e:
-            # This is almost certainly because we couldn't find the UnrealPak
-            # executable to run, but the exception given to the user in this
-            # case is rather impenetrable.  Re-raise a different error which
-            # should point them to the actual problem.
-            raise RuntimeError(f"Could not find {program[0]} to unpack pak file: {e}") from None  # noqa: E501
-
-    def __lt__(self, other: "PakFile") -> bool:
+    def __lt__(self, other: PakFile) -> bool:
         return (self.paknum, self.patchnum) < (other.paknum, other.patchnum)
 
     def __repr__(self) -> str:
         return self.filename
+
+
+def launch_unrealpak(*args: str) -> subprocess.Popen[str]:
+    """
+    Launches unrealpak with the given command line args. Automatically uses wine
+    if configured to, and translates FileNotFoundErrors to more intuitive
+    RuntimeErrors.
+
+    Pipes stdout and stderr, using utf8 encoding.
+
+    Returns the Popen object from running unrealpak.
+    """
+    if WINE is not None:
+        program = [WINE, UNREALPAK]
+    else:
+        program = [UNREALPAK]
+
+    try:
+        return subprocess.Popen(
+            [*program, *args],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+        )
+    except FileNotFoundError as e:
+        # This is almost certainly because we couldn't find the UnrealPak
+        # executable to run, but the exception given to the user in this case is
+        # rather impenetrable.  Re-raise a different error which should point
+        # them to the actual problem.
+        raise RuntimeError(f"Could not find {program[0]} to unpack pak file: {e}") from None  # noqa: E501
 
 
 def delete_extra_files(folder: str) -> None:
@@ -333,6 +376,7 @@ def delete_extra_files(folder: str) -> None:
             for filename in fnmatch.filter(filenames, pattern):
                 os.remove(os.path.join(dirpath, filename))
                 files_deleted += 1
+
         for pattern in EXTRACTED_DIRS_TO_DELETE:
             for dirname in fnmatch.filter(dirnames, pattern):
                 shutil.rmtree(
@@ -344,20 +388,22 @@ def delete_extra_files(folder: str) -> None:
     reports = []
     if files_deleted > 0:
         if files_deleted == 1:
-            files_plural = ''
+            files_plural = ""
         else:
-            files_plural = 's'
+            files_plural = "s"
         reports.append(f"{files_deleted} file{files_plural}")
     if dirs_deleted > 0:
         if dirs_deleted == 1:
-            dirs_plural = ''
+            dirs_plural = ""
         else:
-            dirs_plural = 's'
+            dirs_plural = "s"
         reports.append(f"{dirs_deleted} dir{dirs_plural}")
     if len(reports) > 0:
-        print("  Pruned {} per config".format(
-            " and ".join(reports),
-            ))
+        print(
+            "  Pruned {} per config".format(
+                " and ".join(reports),
+            )
+        )
 
 
 def delete_empty_dirs(folder: str, delete_root: bool = True) -> bool:
@@ -384,7 +430,11 @@ def delete_empty_dirs(folder: str, delete_root: bool = True) -> bool:
     return False
 
 
-def normalize_pak_files(temp_folder: str, final_folder: str, filename_mapping: Dict[str, str]) -> None:
+def normalize_pak_files(
+    temp_folder: str,
+    final_folder: str,
+    filename_mapping: dict[str, str]
+) -> None:
     """
     Move extracted pakfile contents from their temporary extraction point
     `temp_folder`, into their ultimate destination `final_folder`, using
@@ -409,9 +459,10 @@ def normalize_pak_files(temp_folder: str, final_folder: str, filename_mapping: D
     if not delete_empty_dirs(temp_folder):
         raise RuntimeError(f"Could not delete temporary folder {temp_folder}")
 
-def get_install_paks(installroot: str) -> List[str]:
+
+def get_install_paks(install_root: str) -> list[str]:
     """
-    Given an `installroot` which points to the root install of Borderlands 3,
+    Given an `install_root` which points to the root install of Borderlands 3,
     return all pakfiles installed.
     """
     # We should maybe just do an os.walk() from here and grab literally
@@ -420,17 +471,17 @@ def get_install_paks(installroot: str) -> List[str]:
     # more clever and look at the locations we know pakfiles should be.
     pakfiles = []
 
-    base_root = os.path.join(installroot, "OakGame", "Content", "Paks")
+    base_root = os.path.join(install_root, "OakGame", "Content", "Paks")
     for base_pak in os.listdir(base_root):
         if base_pak.endswith(".pak"):
             pakfiles.append(os.path.join(base_root, base_pak))
 
-    dlc_root = os.path.join(installroot, "OakGame", "AdditionalContent")
+    dlc_root = os.path.join(install_root, "OakGame", "AdditionalContent")
     for dlcname in os.listdir(dlc_root):
         dlc_full_path = os.path.join(dlc_root, dlcname, "Paks")
-        for base_pak in os.listdir(dlc_full_path):
-            if base_pak.endswith(".pak"):
-                pakfiles.append(os.path.join(dlc_full_path, base_pak))
+        for dlc_pak in os.listdir(dlc_full_path):
+            if dlc_pak.endswith(".pak"):
+                pakfiles.append(os.path.join(dlc_full_path, dlc_pak))
 
     return pakfiles
 
@@ -443,7 +494,7 @@ def find_default_bl3_install() -> str:
     if os.path.exists(BL3_INSTALL_DIR) and os.path.isdir(BL3_INSTALL_DIR):
         return BL3_INSTALL_DIR
 
-    epic_install_dirs: Dict[str, str] = {
+    epic_install_dirs: dict[str, str] = {
         "Windows": r"C:\Program Files\Epic Games\Borderlands3",
         "Darwin": r"",
         "Linux": r"",
@@ -455,17 +506,19 @@ def find_default_bl3_install() -> str:
     if platform.system() == "Windows":
         try:
             sub_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
-            sub_key += f"\\Steam App {STEAM_APP_ID}"
+            sub_key += rf"\\Steam App {STEAM_APP_ID}"
             key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, sub_key)
             install, key_type = winreg.QueryValueEx(key, "InstallLocation")
-            if key_type == winreg.REG_SZ and os.path.exists(
-                install
-            ) and os.path.isdir(install):
+            if (
+                key_type == winreg.REG_SZ
+                and os.path.exists(install)
+                and os.path.isdir(install)
+            ):
                 return cast(str, install)
         except FileNotFoundError:
             pass
 
-    steamapps_dirs: Dict[str, str] = {
+    steamapps_dirs: dict[str, str] = {
         "Windows": r"C:\Program Files (x86)\Steam\steamapps",
         "Darwin": r"~/Library/Application Support/Steam/steamapps",
         "Linux": r"~/.steam/steam/steamapps",
@@ -747,10 +800,14 @@ encryption key.  Do you actually want to proceed?
             report_str = f"Processing file {pakfile}..."
             print(report_str)
             print("=" * len(report_str) + "\n")
-            filename_mapping = pakfile.extract(tmp_extract, crypto_path)
+
+            filename_mapping = pakfile.get_filename_mapping(crypto_path)
+            pakfile.extract(tmp_extract, crypto_path, filename_mapping.keys())
             delete_extra_files(tmp_extract)
+
             print("  Moving files to in-game locations")
             normalize_pak_files(tmp_extract, final_extract, filename_mapping)
+
             print("  Done!")
             print()
 
