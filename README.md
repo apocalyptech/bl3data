@@ -82,6 +82,18 @@ not especially useful to most Windows users, alas.
   to an SVG, if you configure it that way).  See the program comments for
   specifics.
 
+- `check_object_case.py`: In early June, 2021, the `unpack_bl3.py` script
+  changed the method it uses to determine what the proper in-game paths
+  are for objects, but one drawback to that is there's a few places where
+  case-sensitivity becomes an issue, if running libraries like `bl3data`
+  against the data extracts on Linux.  This utility loops through an extract
+  dir and attempts to find any case mismatches in the data, and reports
+  them to stdout.  Those fixes should then be ported back into `unpack_bl3.py`
+  in the `hardcoded_path_fixes` var.  Used when unpacking a fresh set of
+  BL3 data, basically.  Note that this script is set to use
+  [PyPy3](https://www.pypy.org/) rather than CPython, for speed, though
+  you can of course run it under vanilla CPython instead, if you like.
+
 Processing New Data
 -------------------
 

@@ -136,6 +136,40 @@ LONGEST_PATH_LEN = 164
 re_steam_libraries = re.compile(r"\t+\"\d+\"\t+\"(.+?)\"")
 
 
+class CaseFix:
+    """
+    Class used to deal with case-sensitivity issues while unpacking, mostly just
+    for anyone on Linux dealing with the data programmatically (this won't really
+    help out anyone on Windows, though it won't hurt.)
+    """
+
+    def __init__(self,
+            dir_name: str,
+            from_name: str,
+            to_name: str,
+            directory: Optional[bool] = False,
+            ) -> None:
+        self.dir_name = dir_name
+        self.from_name = from_name
+        self.to_name = to_name
+        self.directory = directory
+        if self.directory:
+            self.re_from = r'^{}/{}/(?P<remaining>.*)$'.format(self.dir_name, self.from_name)
+            self.re_to = r'{}/{}/\g<remaining>'.format(self.dir_name, self.to_name)
+        else:
+            self.re_from = r'^{}/{}\.(?P<ext>\w+)$'.format(
+                    self.dir_name,
+                    self.from_name,
+                    )
+            self.re_to = r'{}/{}.\g<ext>'.format(
+                    self.dir_name,
+                    self.to_name,
+                    )
+
+    def apply(self, filename: str) -> str:
+        return re.sub(self.re_from, self.re_to, filename)
+
+
 class PakFile:
     """
     Class used to sort PakFiles intelligently, so we can extract earlier ones
@@ -180,6 +214,18 @@ class PakFile:
         "OakGame": "Game",
         "Wwise": "WwiseEditor",
     }
+
+    # These are processed in order -- if both a File and Dir fix happens
+    # to the same file, make sure that the "from" values make sense given
+    # any prior fixes.
+    hardcoded_path_fixes: ClassVar[list[CaseFix]] = [
+        CaseFix('Dandelion/Maps/TrashTown', 'TrashTown_P', 'Trashtown_P'),
+        CaseFix('Ixora2/Maps/Mystery/Pandora', 'PandoraMystery_P', 'PandoraMystery_p'),
+        CaseFix('Ixora2/Maps/Mystery/Nekro', 'NekroMystery_P', 'NekroMystery_p'),
+        CaseFix('Ixora2/Maps/Boss', 'SacrificeBoss_P', 'SacrificeBoss_p'),
+        CaseFix('Dandelion/Maps', 'TrashTown', 'Trashtown', directory=True),
+        CaseFix('Game/PatchDLC', 'submappatch', 'SubmapPatch', directory=True),
+    ]
 
     filename: str
     paknum: float
@@ -258,6 +304,10 @@ class PakFile:
                         firstpart = self.content_firstpart_overrides[firstpart]
 
                     real_filename = f"{firstpart}/{lastpart}"
+
+                # ... and also apply our hardcoded fixes for case sensitivity
+                for fix in self.hardcoded_path_fixes:
+                    real_filename = fix.apply(real_filename)
 
                 filename_mapping[filename] = real_filename
 
