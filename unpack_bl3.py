@@ -143,28 +143,23 @@ class CaseFix:
     help out anyone on Windows, though it won't hurt.)
     """
 
-    def __init__(self,
-            dir_name: str,
-            from_name: str,
-            to_name: str,
-            directory: Optional[bool] = False,
-            ) -> None:
+    def __init__(
+        self,
+        dir_name: str,
+        from_name: str,
+        to_name: str,
+        directory: Optional[bool] = False,
+    ) -> None:
         self.dir_name = dir_name
         self.from_name = from_name
         self.to_name = to_name
         self.directory = directory
         if self.directory:
-            self.re_from = r'^{}/{}/(?P<remaining>.*)$'.format(self.dir_name, self.from_name)
-            self.re_to = r'{}/{}/\g<remaining>'.format(self.dir_name, self.to_name)
+            self.re_from = rf"^{self.dir_name}/{self.from_name}/(?P<remaining>.*)$"
+            self.re_to = rf"{self.dir_name}/{self.to_name}/\g<remaining>"
         else:
-            self.re_from = r'^{}/{}\.(?P<ext>\w+)$'.format(
-                    self.dir_name,
-                    self.from_name,
-                    )
-            self.re_to = r'{}/{}.\g<ext>'.format(
-                    self.dir_name,
-                    self.to_name,
-                    )
+            self.re_from = rf"^{self.dir_name}/{self.from_name}\.(?P<ext>\w+)$"
+            self.re_to = rf"{self.dir_name}/{self.to_name}.\g<ext>"
 
     def apply(self, filename: str) -> str:
         return re.sub(self.re_from, self.re_to, filename)
