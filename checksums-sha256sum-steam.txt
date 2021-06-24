@@ -454,7 +454,7 @@ pak-2021-04-08-02_dlc6
 
 21594321add132990e63f6d597e35644c0dd55cb3f7eb1dd0445e80b7ef99460  Ixora2.pak
 
-pak-2021-04-24-xplay_and_events
+pak-2021-06-24-xplay_and_events
 
 f0bc440ccf451c39405a759d1aa120d448e1c9023900ca01bab598cb8ebbb1fe  pakchunk0-WindowsNoEditor_15_P.pak
 b5f1f859a820e7cdbd8d02be736ee1661e485733ad89d91d7d6ab83e5e2d8ccb  pakchunk1-WindowsNoEditor_15_P.pak
