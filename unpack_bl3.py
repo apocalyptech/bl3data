@@ -229,6 +229,7 @@ class PakFile:
         CaseFix('Ixora2/Maps/Boss', 'SacrificeBoss_P', 'SacrificeBoss_p'),
         CaseFix('Dandelion/Maps', 'TrashTown', 'Trashtown', directory=True),
         CaseFix('Game/PatchDLC', 'submappatch', 'SubmapPatch', directory=True),
+        CaseFix('Game/PatchDLC', 'Vaultcard', 'VaultCard', directory=True),
     ]
 
     filename: str

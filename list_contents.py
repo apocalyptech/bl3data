@@ -185,7 +185,7 @@ if args.database:
     for row in curs:
         gameobject = GameObject.from_db(row)
         assert(gameobject.filename_full not in objects)
-        objects[gameobject.filename_full] = gameobject
+        objects[gameobject.filename_full.lower()] = gameobject
         objects_by_id[gameobject.oid] = gameobject
 
     # Read in known object-to-pakfile mappings
@@ -348,8 +348,8 @@ with lzma.open(out_file, 'wt', encoding='utf-8') as df:
                     #    real_filename = f'/{firstpart}/{lastpart}'
 
                     # Get the db object
-                    if inner_filename in objects:
-                        db_object = objects[inner_filename]
+                    if inner_filename.lower() in objects:
+                        db_object = objects[inner_filename.lower()]
                     else:
                         db_object = GameObject(-1, inner_filename)
                         curs.execute('insert into object (filename_base, filename_full) values (%s, %s)', (
@@ -357,8 +357,8 @@ with lzma.open(out_file, 'wt', encoding='utf-8') as df:
                             db_object.filename_full,
                             ))
                         db_object.oid = curs.lastrowid
-                        assert(db_object.filename_full not in objects)
-                        objects[db_object.filename_full] = db_object
+                        assert(db_object.filename_full.lower() not in objects)
+                        objects[db_object.filename_full.lower()] = db_object
                         objects_by_id[db_object.oid] = db_object
                         db_changed = True
 
