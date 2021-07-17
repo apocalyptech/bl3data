@@ -94,6 +94,12 @@ not especially useful to most Windows users, alas.
   [PyPy3](https://www.pypy.org/) rather than CPython, for speed, though
   you can of course run it under vanilla CPython instead, if you like.
 
+- `gen_initial_wwnames.txt`: Used to generate an initial `wwnames.txt`
+  file for use with [wwiser](https://github.com/bnnm/wwiser), to create more
+  useful labels when extracting audio data.  I've uploaded the end result
+  of that [over here](https://github.com/bnnm/wwiser-utils/blob/master/wwnames/Borderlands%203%20%28PC%29.txt),
+  so you shouldn't have to touch this, really.
+
 Processing New Data
 -------------------
 
