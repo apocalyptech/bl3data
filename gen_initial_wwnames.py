@@ -82,6 +82,9 @@ collisions_to_remove = set([
     #'Emt_Prologue_Windmill_Metal_Med_Spin_Lp',
     'LegendPositionv',
 
+    'HeldActorInterfaceE',
+    #'Oak_DLC3_VOBD_TownfolkMale3_Pain_Stagger',
+
     ])
 
 # Filename to write out to
