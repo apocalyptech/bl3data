@@ -225,6 +225,8 @@ class PakFile:
         CaseFix('Dandelion/Maps', 'TrashTown', 'Trashtown', directory=True),
         CaseFix('Game/PatchDLC', 'submappatch', 'SubmapPatch', directory=True),
         CaseFix('Game/PatchDLC', 'Vaultcard', 'VaultCard', directory=True),
+        CaseFix('Game/PatchDLC', 'event2', 'Event2', directory=True),
+        CaseFix('Game/PatchDLC', 'eventvday', 'EventVDay', directory=True),
     ]
 
     filename: str
