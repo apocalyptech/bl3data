@@ -509,7 +509,7 @@ def normalize_pak_files(
             # Do the moves
             final_dirname = os.path.dirname(final_filename_full)
             os.makedirs(final_dirname, exist_ok=True)
-            os.rename(temp_filename_full, final_filename_full)
+            shutil.move(temp_filename_full, final_filename_full)
 
     if not delete_empty_dirs(temp_folder):
         raise RuntimeError(f"Could not delete temporary folder {temp_folder}")
