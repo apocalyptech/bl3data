@@ -110,6 +110,14 @@ if sys.version_info < (3, 9):
     input("\nThis utility requires at least Python 3.9.  Hit Enter to exit.\n")
     raise RuntimeError("This utility requires at least Python 3.9")
 
+# Check for existence of WINEPREFIX if on Linux and told to do so
+if platform.system() == "Linux" and LINUX_USE_WINE:
+    if WINEPREFIX is None or not os.path.exists(WINEPREFIX):
+        print("")
+        print(f"WINEPREFIX is not set properly.  Make sure that this path exists: {WINEPREFIX}")
+        input("Hit Enter to exit.\n")
+        raise RuntimeError("WINEPREFIX not found")
+
 # When excluding *.wem-only pakfiles entirely, and after deleting all the
 # default stuff specified in EXTRACTED_*_TO_DELETE, this is the ratio of pakfile
 # size to extracted size. (For reference, after the release of DLC5, it's 79GB
