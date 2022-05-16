@@ -100,6 +100,15 @@ not especially useful to most Windows users, alas.
   of that [over here](https://github.com/bnnm/wwiser-utils/blob/master/wwnames/Borderlands%203%20%28PC%29.txt),
   so you shouldn't have to touch this, really.
 
+- `inv_serial_crypt.py`: A utility to extract/decrypt and re-encrypt the
+  `InventorySerialNumberDatabase.dat` file which specifies how parts are
+  packed into item serial numbers.  Some modders were interested in finding
+  out if it was possible to add in new guns/parts via pakfile patching,
+  and doing so would require modifying this file, which is why I'd hacked
+  it up.  Of extremely limited use in general -- save editors which require
+  this file already have it available in a variety of places (for instance,
+  [gibbed's repo](https://github.com/gibbed/Borderlands3Dumps)).
+
 Processing New Data
 -------------------
 
