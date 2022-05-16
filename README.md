@@ -107,7 +107,8 @@ not especially useful to most Windows users, alas.
   and doing so would require modifying this file, which is why I'd hacked
   it up.  Of extremely limited use in general -- save editors which require
   this file already have it available in a variety of places (for instance,
-  [gibbed's repo](https://github.com/gibbed/Borderlands3Dumps)).
+  [gibbed's repo](https://github.com/gibbed/Borderlands3Dumps), or
+  [my own editor's processing script](https://github.com/apocalyptech/bl3-cli-saveedit/blob/master/bl3save/resources/gen_inventory_db.py)).
 
 Processing New Data
 -------------------
