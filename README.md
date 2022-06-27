@@ -6,6 +6,10 @@ that's most useful for data inspection.  I Run BL3 on Linux using
 Wine/Proton, so all of these assume Linux as well, so they're probably
 not especially useful to most Windows users, alas.
 
+Wonderlands versions of these utils can be found at my
+[wldata repo](https://github.com/apocalyptech/wldata) (the changes are
+minimal to nonexistant).
+
 - `link_paks.py`: I like to keep BL3's pakfiles sorted into dirs which
   correspond to the patches in which they were released.  This was easy
   enough to hand-manage when I was just adding them one at a time, as
