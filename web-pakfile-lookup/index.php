@@ -140,6 +140,12 @@ $page->add_js('pakfile.js', 1);
 $page->add_changelog('March 31, 2021', 'Initial release (data current through Jan 21, 2021\'s patch)');
 $page->add_changelog('April 8, 2021', 'Updated with DLC6 (Director\'s Cut) data');
 $page->add_changelog('May 15, 2021', 'Added link to Google Drive textfile archive');
+$page->add_changelog('June 24, 2021', 'Updated with data from today\'s patch');
+$page->add_changelog('August 5, 2021', 'Updated with data from today\'s patch');
+$page->add_changelog('September 13, 2021', 'Updated with data from the 2021-09-09 patch');
+$page->add_changelog('November 18, 2021', 'Updated with data from today\'s patch (Vault Card 3)');
+$page->add_changelog('June 11, 2021', 'Updated with data from June 1st\'s Playstation Crossplay patch');
+$page->add_changelog('August 4, 2022', 'Added SQLite DB Dump');
 $page->apoc_header();
 
 if (count($errors) > 0)
@@ -163,7 +169,9 @@ Borderlands 3 data</a> for modding purposes, but who doesn't want to unpack lite
 everything.  Using this page you can find out the specific pakfile which has what you
 want and unpack just that one.  Text files which describe pakfile contents are also
 available <a href="https://drive.google.com/drive/folders/1ptNlbvCc79X68j2VLqNPEUiP87JU4Nz7?usp=sharing">via
-this Google Drive link</a>.
+this Google Drive link</a>.  A <a href="https://www.sqlite.org/">SQLite</a>
+dump of the database is available here:
+<a href="bl3pakfile.sqlite3.zip">bl3pakfile.sqlite3.zip</a>.
 </p>
 
 <p>
