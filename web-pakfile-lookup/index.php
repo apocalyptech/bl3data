@@ -145,7 +145,10 @@ $page->add_changelog('August 5, 2021', 'Updated with data from today\'s patch');
 $page->add_changelog('September 13, 2021', 'Updated with data from the 2021-09-09 patch');
 $page->add_changelog('November 18, 2021', 'Updated with data from today\'s patch (Vault Card 3)');
 $page->add_changelog('June 11, 2021', 'Updated with data from June 1st\'s Playstation Crossplay patch');
-$page->add_changelog('August 4, 2022', 'Added SQLite DB Dump');
+$page->add_changelog('August 4, 2022', array(
+    'Added SQLite DB Dump',
+    "Link to site/generation sourcecode <em>(why didn't I do that originally?)</em>",
+));
 $page->apoc_header();
 
 if (count($errors) > 0)
@@ -167,12 +170,18 @@ This page can be used to find which pakfiles contain which Borderlands 3 game ob
 interested in <a href="https://github.com/BLCM/BLCMods/wiki/Accessing-Borderlands-3-Data">accessing
 Borderlands 3 data</a> for modding purposes, but who doesn't want to unpack literally
 everything.  Using this page you can find out the specific pakfile which has what you
-want and unpack just that one.  Text files which describe pakfile contents are also
-available <a href="https://drive.google.com/drive/folders/1ptNlbvCc79X68j2VLqNPEUiP87JU4Nz7?usp=sharing">via
-this Google Drive link</a>.  A <a href="https://www.sqlite.org/">SQLite</a>
-dump of the database is available here:
-<a href="bl3pakfile.sqlite3.zip">bl3pakfile.sqlite3.zip</a>.
+want and unpack just that one.
 </p>
+
+<ul class="compact">
+<li>Text files which describe pakfile contents are also
+    available <a href="https://drive.google.com/drive/folders/1ptNlbvCc79X68j2VLqNPEUiP87JU4Nz7?usp=sharing">via
+    this Google Drive link</a>.</li>
+<li>A <a href="https://www.sqlite.org/">SQLite</a> dump of the database is
+    available here: <a href="bl3pakfile.sqlite3.zip">bl3pakfile.sqlite3.zip</a>.</li>
+<li>The sourcecode for this site, and the data-generation scripts, live
+    in my <a href="https://github.com/apocalyptech/bl3data">bl3data</a> repo.</li>
+</ul>
 
 <p>
 To search, input <b>only</b> the last "name" in the object to the textbox.  For
