@@ -149,6 +149,7 @@ $page->add_changelog('August 4, 2022', array(
     'Added SQLite DB Dump',
     "Link to site/generation sourcecode <em>(why didn't I do that originally?)</em>",
 ));
+$page->add_changelog('August 18, 2022', "Updated with data from today's Steam Deck Compatibility patch");
 $page->apoc_header();
 
 if (count($errors) > 0)
