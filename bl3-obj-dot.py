@@ -29,6 +29,7 @@
 import os
 import sys
 import json
+import argparse
 import textwrap
 import subprocess
 
@@ -50,13 +51,41 @@ import subprocess
 # This expects the JWP serializations to include my custom additions found at
 # https://github.com/apocalyptech/JohnWickParse/tree/indexed_arrays
 
-# External commands we call
-cmd_serialize = '/home/pez/bin/ueserialize'
-cmd_dot = '/usr/bin/dot'
-cmd_view = '/usr/bin/feh'
+parser = argparse.ArgumentParser(
+        description='Generate graphviz graphs describing BL3/WL Objects',
+        )
 
-# Type of output.  `cmd_view` will only be called if this is png/jpg/gif
-dot_output = 'png'
+parser.add_argument('-r', '--render',
+        default='svg',
+        choices={'svg', 'png', 'jpg', 'gif'},
+        help='Render type',
+        )
+
+parser.add_argument('-s', '--serialize',
+        type=str,
+        default='/home/pez/bin/ueserialize',
+        help='Command to use to serialize data',
+        )
+
+parser.add_argument('-d', '--dot',
+        type=str,
+        default='/usr/bin/dot',
+        help='Path to Grpahviz dot executable',
+        )
+
+parser.add_argument('-v', '--view',
+        type=str,
+        default='/usr/bin/feh',
+        help='Path to viewer application',
+        )
+
+parser.add_argument('filename',
+        nargs=1,
+        help='Filename to serialize and render',
+        )
+
+args = parser.parse_args()
+args.filename = args.filename[0]
 
 # Keep track of attribute nodes we've already generated and linked to
 linked_history = set()
@@ -139,7 +168,7 @@ def process_list(export_idx, data, cur_path):
             print('Unknown value type for {} [{}]: {}'.format(cur_path, idx, type(v)))
 
 # Grab the filename to process
-filename = sys.argv[1]
+filename = args.filename
 if filename.endswith('.'):
     filename = filename[:-1]
 if '.' in filename:
@@ -149,7 +178,7 @@ if '.' in filename:
     filename = filename_base
 
 # Serialize it (might be already serialized, but don't bother checking)
-subprocess.run([cmd_serialize, 'serialize', filename])
+subprocess.run([args.serialize, 'serialize', filename])
 
 # Make sure it worked
 json_path = '{}.json'.format(filename)
@@ -230,14 +259,13 @@ with open(dot_path, 'wt') as odf:
     print('}', file=odf)
 
 # Now generate graphviz
-final_path = '{}.{}'.format(filename, dot_output)
-subprocess.run([cmd_dot, '-T{}'.format(dot_output), dot_path, '-o', final_path])
+final_path = '{}.{}'.format(filename, args.render)
+subprocess.run([args.dot, '-T{}'.format(args.render), dot_path, '-o', final_path])
 
 # ... and display it, if it worked
 if os.path.exists(final_path):
     print('Wrote to {}!'.format(final_path))
-    if dot_output in {'png', 'jpg', 'gif'}:
-        subprocess.run([cmd_view, final_path])
+    subprocess.run([args.view, final_path])
 else:
     print('ERROR: {} was not written'.format(final_path))
 
