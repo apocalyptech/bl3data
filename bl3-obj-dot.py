@@ -215,8 +215,13 @@ with open(json_path) as df:
 
         # This may be useful for DialogPerformanceData exports
         if 'Text' in export:
-            lines = textwrap.wrap(export['Text']['string'], width=30)
-            export_title += '<br/><i>"{}"</i>'.format('<br/>'.join(lines))
+            if 'string' in export['Text']:
+                lines = textwrap.wrap(export['Text']['string'], width=30)
+                export_title += '<br/><i>"{}"</i>'.format('<br/>'.join(lines))
+
+        # This may be useful for ParticleSpriteEmitter exports
+        if 'EmitterName' in export:
+            export_title += '<br/><i>{}</i>'.format(export['EmitterName'])
 
         export_statements.append((idx, 'export_{} [label=<{}> shape=rectangle style=filled fillcolor={}];'.format(
             idx,
