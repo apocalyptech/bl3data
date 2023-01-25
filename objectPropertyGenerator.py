@@ -55,7 +55,7 @@ except ModuleNotFoundError:
 #  - Colors that hurt c0dycode's eyes
 
 # Change your data path and cache file here
-dataDir = r"/home/pez/bl3_egs_root/OakGame/Binaries/Win64/data/basegame/Sanctuary3_P"
+dataDir = r"/games/bl3_steam/games/steamapps/common/Borderlands 3/OakGame/Binaries/Win64/data/basegame/Prologue_P"
 cacheFile = "/home/pez/.local/share/bl3objectprops/props.json.xz"
 
 def generatePropertyData(directoryPath, cacheFile):
