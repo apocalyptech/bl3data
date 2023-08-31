@@ -2,7 +2,7 @@
 
 /**
  * Borderlands 3 Pakfile Contents Lookup
- * Copyright (C) 2021 CJ Kucera
+ * Copyright (C) 2021-2023 CJ Kucera
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -150,6 +150,7 @@ $page->add_changelog('August 4, 2022', array(
     "Link to site/generation sourcecode <em>(why didn't I do that originally?)</em>",
 ));
 $page->add_changelog('August 18, 2022', "Updated with data from today's Steam Deck Compatibility patch");
+$page->add_changelog('August 31, 2023', "Updated with data from today's Free-Cosmetics patch");
 $page->apoc_header();
 
 if (count($errors) > 0)
