@@ -41,6 +41,19 @@ dlc6_re = re.compile(r'^Ixora2(_(\d+)_P)?\.pak$')
 dlc_step = 1000
 
 class PakFile(object):
+    """
+    Class to sort pakfiles in a way that's pleasing to a human viewer.
+    Note that this is *not* the order in which UE4 actually loads +
+    processes pakfiles!  UE4's primary sort is the patch number -- all
+    "unpatched" paks first, then all patchnum 0s, then all patchnum 1s,
+    etc.  Within a patchnum group, it's a simple alphanumeric sort to
+    get them loaded (which includes directory components, though I'm
+    not sure what's considered the "root" when looking at that).
+
+    It's possible the game loads DLC paks a bit differently; I'd assume
+    that they get loaded after the base-game patchless paks, even
+    though "AdditionalContent" would get sorted before "Content".
+    """
 
     def __init__(self, filename):
         self.filename = filename

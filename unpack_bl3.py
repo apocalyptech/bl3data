@@ -180,10 +180,10 @@ class PakFile:
     """
 
     re_pak: ClassVar[re.Pattern[str]] = re.compile(
-        r"^(?P<dir_prefix>.*[/\\])?pakchunk(?P<datagroup>\d+)(?P<optional>optional)?-WindowsNoEditor(_(?P<patchnum>\d+)_P)?\.pak$"  # noqa: E501
+        r"^(?P<dir_prefix>.*[/\\])?(?P<filename>pakchunk(?P<datagroup>\d+)(?P<optional>optional)?-WindowsNoEditor(_(?P<patchnum>\d+)_P)?\.pak)$"  # noqa: E501
     )
     re_dlc: ClassVar[re.Pattern[str]] = re.compile(
-        r"^(?P<dir_prefix>.*[/\\])?(?P<dlcname>Dandelion|Hibiscus|Geranium|Alisma|Ixora|Ixora2)(_(?P<patchnum>\d+)_P)?\.pak$"  # noqa: E501
+        r"^(?P<dir_prefix>.*[/\\])?(?P<filename>(?P<dlcname>Dandelion|Hibiscus|Geranium|Alisma|Ixora|Ixora2)\.pak)$"  # noqa: E501
     )
     re_unpack_mount: ClassVar[re.Pattern[str]] = re.compile(
         r"Display: Mount point (?P<mountpoint>.*)$"
@@ -200,15 +200,24 @@ class PakFile:
     re_extract: ClassVar[re.Pattern[str]] = re.compile(
         r"Display: Extracted \"(?P<filename>.*?)\" to "
     )
-    dlc_nums: ClassVar[dict[str, int]] = {
-        "Dandelion": 1,
-        "Hibiscus": 2,
-        "Geranium": 3,
-        "Alisma": 4,
-        "Ixora": 5,
-        "Ixora2": 6,
+
+    # We assign paks without a patchnum the "virtual" patchnum -1.  I'm
+    # actually not sure exactly how the game loads in DLC pakfiles.
+    # They may just get alphanumerically sorted along with the main
+    # pakfiles (presumably including the directory components), or they
+    # might be manually loaded in one by one?  I'm just basically
+    # hardcoding some intermediate "virtual" patchnums here so that
+    # when *we* enocunter them, we unpack 'em one by one (in DLC-release
+    # order) after the main game "base" paks.  Then all the patch-paks
+    # will get extracted afterwards.  It's a bit silly, but whatever.
+    dlc_virtual_patchnum: ClassVar[dict[str, float]] = {
+        "Dandelion": -0.9,
+        "Hibiscus": -0.8,
+        "Geranium": -0.7,
+        "Alisma": -0.6,
+        "Ixora": -0.5,
+        "Ixora2": -0.4,
     }
-    dlc_step: ClassVar[int] = 1000
 
     # Which datagroups/paknums *only* ever contain *.wem audio data
     audio_nums: ClassVar[set[int]] = {2, 3, 85, 86, 87, 88, 89, 90, 91}
@@ -238,34 +247,30 @@ class PakFile:
     ]
 
     filename: str
+    sort_filename: str
     paknum: float
     patchnum: float
     size: int
 
     def __init__(self, filename: str) -> None:
         self.filename = filename
-        match = self.re_pak.match(self.filename)
-        if match:
+        if match := self.re_pak.match(self.filename):
+            self.sort_filename = match.group("filename").casefold()
             self.paknum = int(match.group("datagroup"))
-            if match.group("optional") is not None:
-                self.paknum += 0.5
             if match.group("patchnum") is not None:
                 self.patchnum = int(match.group("patchnum"))
             else:
                 self.patchnum = -1
+        elif match := self.re_dlc.match(self.filename):
+            self.sort_filename = match.group("filename").casefold()
+            dlc_name = match.group("dlcname")
+            if dlc_name not in self.dlc_virtual_patchnum:
+                raise RuntimeError(f"Unknown DLC Codename: {dlc_name}")
+            # paknum of 0 isn't *really* appropriate here, but who cares.
+            self.paknum = 0
+            self.patchnum = self.dlc_virtual_patchnum[dlc_name]
         else:
-            match = self.re_dlc.match(self.filename)
-            if match:
-                dlc_name = match.group("dlcname")
-                if dlc_name not in self.dlc_nums:
-                    raise RuntimeError(f"Unknown DLC Codename: {dlc_name}")
-                self.paknum = self.dlc_step * self.dlc_nums[dlc_name]
-                if match.group("patchnum") is not None:
-                    self.patchnum = int(match.group("patchnum"))
-                else:
-                    self.patchnum = -1
-            else:
-                raise RuntimeError(f"Unknown pak file: {filename}")
+            raise RuntimeError(f"Unknown pak file: {filename}")
         self.size = os.stat(self.filename, follow_symlinks=True).st_size
 
     def is_audio_only(self) -> bool:
@@ -391,7 +396,27 @@ class PakFile:
             print(f"  Unpacking files: {files_unpacked}")
 
     def __lt__(self, other: PakFile) -> bool:
-        return (self.paknum, self.patchnum) < (other.paknum, other.patchnum)
+        """
+        Sorting behavior!  We used to sort these first by paknum and then by
+        patchnum, but that's not actually what the game does.  The game
+        processes everything in the same patchnum first, sorting internally
+        by just alphanumerics (including the directory structure), and then
+        walks up the patchnums that way.  The paknum is basically ignored
+        entirely except that it's technically involved in the alphanumeric
+        filename sorting.  So, we're going to start doing that here, too.
+
+        Since we may not be seeing the pakfiles inside the actual game
+        dirs when processing, we're ignoring any path information when
+        doing the alphanumeric check.  We're just sorting by the filename
+        itself.
+
+        I'm pretty sure it's a case-insensitive check when doing the
+        alphanumeric filename check, so that's what we'll do too
+        """
+        if self.patchnum != other.patchnum:
+            return self.patchnum < other.patchnum
+        else:
+            return self.sort_filename < other.sort_filename
 
     def __repr__(self) -> str:
         return self.filename
