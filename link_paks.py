@@ -39,7 +39,7 @@ import subprocess
 # Base dirs to find paks
 basedirs = {
         'egs': '/usr/local/winex/lutris_games/epic-games-store/drive_c/Program Files/Epic Games/Borderlands3/OakGame',
-        'steam': '/usr/local/games/bl3_steam/games/steamapps/common/Borderlands 3/OakGame',
+        'steam': '/games/bl3_steam/games/steamapps/common/Borderlands 3/OakGame',
         }
 
 # Where to find them by DLC
