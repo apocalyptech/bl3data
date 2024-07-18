@@ -246,8 +246,8 @@ for filename in os.listdir(dir_to_process):
         pakfiles_fs.append(new_pakfile)
 
 # Regexes to help convert an in-pak pathname to an in-game object path
-plugins_re = re.compile('^(?P<firstpart>\w+)/Plugins/(?P<lastpart>.*)\s*$')
-content_re = re.compile('^(?P<junk>.*/)?(?P<firstpart>\w+)/Content/(?P<lastpart>.*)\s*$')
+plugins_re = re.compile(r'^(?P<firstpart>\w+)/Plugins/(?P<lastpart>.*)\s*$')
+content_re = re.compile(r'^(?P<junk>.*/)?(?P<firstpart>\w+)/Content/(?P<lastpart>.*)\s*$')
 
 # Process
 with lzma.open(out_file, 'wt', encoding='utf-8') as df:
